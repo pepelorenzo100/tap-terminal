@@ -1,0 +1,23 @@
+# ==========================================
+# TAP TERMINAL - ROOT GITIGNORE
+# ==========================================
+
+# Configuración local de Postman
+.postman/
+
+# Archivos propios de Windows
+Thumbs.db
+Desktop.ini
+
+# Configuración local de VS Code
+.vscode/
+
+# Archivos temporales
+*.tmp
+*.temp
+*.log
+
+# Archivos de configuración de entorno
+.env
+.env.*
+!.env.example
