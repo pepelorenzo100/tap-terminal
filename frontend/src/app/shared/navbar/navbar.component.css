@@ -1,0 +1,294 @@
+/**
+ * ============================================================
+ * TAP TERMINAL
+ * NAVBAR - ESTILOS
+ * ============================================================
+ *
+ * Barra principal de navegación del sistema.
+ *
+ * Componentes:
+ * - Identidad TAP Terminal
+ * - Navegación Productos / Usuarios
+ * - Cerrar sesión
+ *
+ * ============================================================
+ */
+
+
+/* ============================================================
+   CONTENEDOR PRINCIPAL
+   ============================================================ */
+
+.navbar {
+  width: 100%;
+  min-height: 64px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 32px;
+  box-sizing: border-box;
+
+  background: #172033;
+  color: #ffffff;
+
+  border-bottom: 3px solid #d89b3d;
+
+  font-family:
+    Arial,
+    Helvetica,
+    sans-serif;
+}
+
+
+/* ============================================================
+   IDENTIDAD DEL SISTEMA
+   ============================================================ */
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+
+/* Nombre principal */
+
+.navbar-title {
+  color: #ffffff;
+
+  text-decoration: none;
+
+  font-size: 22px;
+  font-weight: 700;
+
+  transition:
+    color 0.2s ease,
+    opacity 0.2s ease;
+}
+
+
+.navbar-title:hover {
+  color: #d89b3d;
+}
+
+
+/* Subtítulo */
+
+.navbar-subtitle {
+  color: #c7ccd5;
+
+  font-size: 13px;
+
+  padding-left: 14px;
+
+  border-left: 1px solid #596273;
+}
+
+
+/* ============================================================
+   MENÚ
+   ============================================================ */
+
+.navbar-menu {
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+}
+
+
+/* ============================================================
+   ENLACES
+   ============================================================ */
+
+.navbar-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 38px;
+
+  padding: 0 18px;
+
+  box-sizing: border-box;
+
+  color: #e8ebef;
+
+  text-decoration: none;
+
+  border-radius: 6px;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+
+/* Hover */
+
+.navbar-link:hover {
+  background: #27334a;
+  color: #ffffff;
+
+  transform: translateY(-1px);
+}
+
+
+/* Ruta activa */
+
+.navbar-link.active {
+  background: #d89b3d;
+  color: #172033;
+}
+
+
+/* Hover sobre ruta activa */
+
+.navbar-link.active:hover {
+  background: #e5aa4d;
+  color: #172033;
+}
+
+
+/* ============================================================
+   BOTÓN CERRAR SESIÓN
+   ============================================================ */
+
+.navbar-logout {
+  min-height: 38px;
+
+  padding: 0 18px;
+
+  margin-left: 8px;
+
+  border: 1px solid #c95757;
+
+  border-radius: 6px;
+
+  background: transparent;
+
+  color: #ffffff;
+
+  font-family:
+    Arial,
+    Helvetica,
+    sans-serif;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+
+/* Hover */
+
+.navbar-logout:hover {
+  background: #c95757;
+
+  border-color: #c95757;
+
+  color: #ffffff;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 768px) {
+
+  .navbar {
+    min-height: auto;
+
+    flex-direction: column;
+
+    align-items: stretch;
+
+    gap: 14px;
+
+    padding: 18px;
+  }
+
+
+  .navbar-brand {
+    justify-content: center;
+
+    flex-wrap: wrap;
+  }
+
+
+  .navbar-subtitle {
+    padding-left: 10px;
+  }
+
+
+  .navbar-menu {
+    justify-content: center;
+
+    flex-wrap: wrap;
+  }
+
+
+  .navbar-link,
+  .navbar-logout {
+    min-height: 40px;
+  }
+
+}
+
+
+/* ============================================================
+   MÓVILES PEQUEÑOS
+   ============================================================ */
+
+@media (max-width: 480px) {
+
+  .navbar {
+    padding: 14px;
+  }
+
+
+  .navbar-brand {
+    flex-direction: column;
+
+    gap: 5px;
+  }
+
+
+  .navbar-subtitle {
+    padding-left: 0;
+
+    border-left: none;
+  }
+
+
+  .navbar-menu {
+    width: 100%;
+
+    flex-direction: column;
+  }
+
+
+  .navbar-link,
+  .navbar-logout {
+    width: 100%;
+  }
+
+
+  .navbar-logout {
+    margin-left: 0;
+  }
+
+}

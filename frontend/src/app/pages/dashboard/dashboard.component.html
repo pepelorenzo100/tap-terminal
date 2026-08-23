@@ -1,0 +1,92 @@
+<!--
+  ============================================================
+  TAP TERMINAL
+  DASHBOARD
+  ============================================================
+
+  Pantalla principal del sistema.
+
+  Desde aquí el usuario puede acceder rápidamente a:
+
+      Productos
+      Usuarios
+
+  La navegación utiliza Angular Router.
+  ============================================================
+-->
+
+<section class="dashboard">
+
+  <!-- ========================================================
+       ENCABEZADO
+       ======================================================== -->
+
+  <header class="dashboard-header">
+
+    <h1>
+      TAP Terminal
+    </h1>
+
+    <p>
+      Panel principal de administración
+    </p>
+
+  </header>
+
+
+  <!-- ========================================================
+       ACCESOS PRINCIPALES
+       ======================================================== -->
+
+  <section class="dashboard-cards">
+
+    <!-- ======================================================
+         PRODUCTOS
+         ====================================================== -->
+
+    <a
+      routerLink="/products"
+      class="dashboard-card"
+    >
+
+      <h2>
+        Productos
+      </h2>
+
+      <p>
+        Administrar productos registrados en el sistema.
+      </p>
+
+      <span>
+        Ir a productos →
+      </span>
+
+    </a>
+
+
+    <!-- ======================================================
+         USUARIOS
+         ====================================================== -->
+
+    <a
+      routerLink="/users"
+      class="dashboard-card"
+    >
+
+      <h2>
+        Usuarios
+      </h2>
+
+      <p>
+        Administrar los usuarios registrados en el sistema.
+      </p>
+
+      <span>
+        Ir a usuarios →
+      </span>
+
+    </a>
+
+  </section>
+
+</section>

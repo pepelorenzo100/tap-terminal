@@ -12,11 +12,12 @@
  *
  * Definir las rutas principales de la aplicación Angular.
  *
- * Módulos actuales:
+ * Rutas:
  *
- *     /login
- *     /products
- *     /users
+ *     /              → Dashboard
+ *     /login         → Login
+ *     /products      → Productos
+ *     /users         → Usuarios
  *
  * Seguridad:
  *
@@ -46,9 +47,17 @@ import { Routes } from '@angular/router';
 
 import { LoginComponent } from './pages/login/login.component';
 
-import { ProductsComponent } from './pages/products/products.component';
+import {
+  ProductsComponent
+} from './pages/products/products.component';
 
-import { UsersComponent } from './pages/users/users.component';
+import {
+  UsersComponent
+} from './pages/users/users.component';
+
+import {
+  DashboardComponent
+} from './pages/dashboard/dashboard.component';
 
 
 /**
@@ -57,7 +66,9 @@ import { UsersComponent } from './pages/users/users.component';
  * ============================================================
  */
 
-import { authGuard } from './guards/auth.guard';
+import {
+  authGuard
+} from './guards/auth.guard';
 
 
 /**
@@ -77,17 +88,51 @@ export const routes: Routes = [
    *
    *     /login
    *
-   * Esta ruta es pública.
+   * Ruta pública.
    *
-   * El usuario necesita acceder al login antes de
-   * disponer de un token de autenticación.
-   *
+   * El usuario puede acceder al login sin autenticarse.
    */
 
   {
     path: 'login',
 
     component: LoginComponent
+  },
+
+
+  /**
+   * ==========================================================
+   * DASHBOARD
+   * ==========================================================
+   *
+   * URL:
+   *
+   *     /
+   *
+   * El Dashboard es la pantalla principal del sistema.
+   *
+   * Requiere autenticación.
+   *
+   * Flujo:
+   *
+   *     /
+   *      ↓
+   *     authGuard
+   *      ↓
+   *     DashboardComponent
+   *
+   */
+
+  {
+    path: '',
+
+    pathMatch: 'full',
+
+    component: DashboardComponent,
+
+    canActivate: [
+      authGuard
+    ]
   },
 
 
@@ -100,11 +145,7 @@ export const routes: Routes = [
    *
    *     /products
    *
-   * Esta sección requiere autenticación.
-   *
-   * AuthGuard comprueba que exista una sesión válida
-   * antes de permitir el acceso.
-   *
+   * Sección protegida.
    */
 
   {
@@ -127,19 +168,7 @@ export const routes: Routes = [
    *
    *     /users
    *
-   * Esta sección requiere autenticación.
-   *
-   * Los usuarios del sistema son información administrativa,
-   * por lo que no debe estar disponible públicamente.
-   *
-   * Flujo:
-   *
-   *     /users
-   *        ↓
-   *     authGuard
-   *        ↓
-   *     UsersComponent
-   *
+   * Sección protegida.
    */
 
   {
@@ -155,39 +184,25 @@ export const routes: Routes = [
 
   /**
    * ==========================================================
-   * RUTA RAÍZ
-   * ==========================================================
-   *
-   * URL:
-   *
-   *     /
-   *
-   * Por defecto enviamos al usuario al login.
-   *
-   */
-
-  {
-    path: '',
-
-    pathMatch: 'full',
-
-    redirectTo: 'login'
-  },
-
-
-  /**
-   * ==========================================================
    * RUTAS DESCONOCIDAS
    * ==========================================================
    *
-   * Cualquier URL que no exista será redirigida al login.
+   * Cualquier URL inexistente será enviada al Dashboard.
    *
+   * Ejemplo:
+   *
+   *     /cualquier-ruta
+   *             ↓
+   *         Dashboard
+   *
+   * El AuthGuard impedirá que un usuario no autenticado
+   * acceda al Dashboard.
    */
 
   {
     path: '**',
 
-    redirectTo: 'login'
+    redirectTo: ''
   }
 
 ];
