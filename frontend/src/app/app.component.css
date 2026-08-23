@@ -1,0 +1,67 @@
+/*
+ * Estilos principales del componente raíz.
+ *
+ * Este archivo controla la estructura visual general
+ * de AppComponent.
+ *
+ * La intención es mantener una interfaz sencilla,
+ * limpia y fácil de ampliar posteriormente.
+ */
+
+/*
+ * Contenedor principal de toda la aplicación.
+ *
+ * min-height: 100vh hace que ocupe como mínimo
+ * toda la altura visible del navegador.
+ */
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/*
+ * Encabezado principal.
+ *
+ * Posteriormente aquí podremos incorporar:
+ *
+ * - Logo.
+ * - Usuario autenticado.
+ * - Menú.
+ * - Botón de cerrar sesión.
+ */
+.app-header {
+  padding: 20px;
+  border-bottom: 1px solid #dddddd;
+}
+
+/*
+ * Título principal.
+ *
+ * Eliminamos el margen superior predeterminado
+ * del navegador para controlar nosotros el espaciado.
+ */
+.app-header h1 {
+  margin: 0;
+}
+
+/*
+ * Descripción del sistema.
+ *
+ * Eliminamos el margen inferior para mantener
+ * un encabezado compacto.
+ */
+.app-header p {
+  margin: 5px 0 0;
+}
+
+/*
+ * Área principal de contenido.
+ *
+ * flex: 1 permite que esta sección ocupe
+ * el espacio disponible restante del navegador.
+ */
+.app-content {
+  flex: 1;
+  padding: 20px;
+}
