@@ -2,42 +2,102 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+/*
+|--------------------------------------------------------------------------
+| TAP TERMINAL
+| USER MODEL
+|--------------------------------------------------------------------------
+|
+| Modelo de usuarios de TAP Terminal.
+|
+| Los usuarios se almacenan en MongoDB.
+|
+| Este modelo también será utilizado por Laravel
+| para realizar la autenticación.
+|
+|--------------------------------------------------------------------------
+*/
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
+use MongoDB\Laravel\Auth\User as Authenticatable;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    /*
+    |--------------------------------------------------------------------------
+    | TRAITS
+    |--------------------------------------------------------------------------
+    |
+    | HasApiTokens
+    | Permite generar tokens mediante Laravel Sanctum.
+    |
+    | HasFactory
+    | Permite utilizar factories para pruebas.
+    |
+    | Notifiable
+    | Permite utilizar las notificaciones de Laravel.
+    |
+    */
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
+    use HasApiTokens, HasFactory, Notifiable;
+
+    /*
+    |--------------------------------------------------------------------------
+    | MONGODB
+    |--------------------------------------------------------------------------
+    |
+    | Colección donde se almacenarán los usuarios.
+    |
+    */
+
+    protected $connection = 'mongodb';
+
+    protected $table = 'users';
+
+    /*
+    |--------------------------------------------------------------------------
+    | MASS ASSIGNMENT
+    |--------------------------------------------------------------------------
+    |
+    | Campos permitidos al crear o actualizar usuarios.
+    |
+    */
+
     protected $fillable = [
+        'code',
         'name',
         'email',
+        'phone',
+        'profile_photo',
         'password',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | HIDDEN
+    |--------------------------------------------------------------------------
+    |
+    | Nunca debemos devolver la contraseña mediante la API.
+    |
+    */
+
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | CASTS
+    |--------------------------------------------------------------------------
+    |
+    | Laravel almacenará y devolverá estas propiedades
+    | con el tipo correspondiente.
+    |
+    */
+
     protected function casts(): array
     {
         return [

@@ -73,7 +73,6 @@ use MongoDB\Laravel\Eloquent\Model;
  *
  * ============================================================
  */
-
 class Product extends Model
 {
     /**
@@ -90,9 +89,7 @@ class Product extends Model
      *
      * ========================================================
      */
-
     protected $collection = 'products';
-
 
     /**
      * ========================================================
@@ -118,9 +115,7 @@ class Product extends Model
      *
      * ========================================================
      */
-
     public $timestamps = true;
-
 
     /**
      * ========================================================
@@ -163,13 +158,11 @@ class Product extends Model
      *
      * ========================================================
      */
-
     protected $fillable = [
         'name',
         'brand',
         'price',
     ];
-
 
     /**
      * ========================================================
@@ -193,11 +186,9 @@ class Product extends Model
      *
      * ========================================================
      */
-
     protected $casts = [
         'price' => 'decimal:2',
     ];
-
 
     /**
      * ========================================================
@@ -216,7 +207,6 @@ class Product extends Model
      *
      * ========================================================
      */
-
     protected static function booted(): void
     {
         /**
@@ -229,7 +219,6 @@ class Product extends Model
          *
          * ====================================================
          */
-
         static::creating(function (Product $product): void {
 
             /**
@@ -264,11 +253,10 @@ class Product extends Model
              *
              * =================================================
              */
-
             if (empty($product->code)) {
 
                 $product->code =
-                    'PROD-' . strtoupper(
+                    'PROD-'.strtoupper(
                         (string) Str::ulid()
                     );
 

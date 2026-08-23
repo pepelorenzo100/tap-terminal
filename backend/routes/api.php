@@ -2,79 +2,43 @@
 
 /*
 |--------------------------------------------------------------------------
-| TAP TERMINAL
-| API ROUTES
+| TAP TERMINAL - API ROUTES
 |--------------------------------------------------------------------------
 |
-| Archivo:
-| routes/api.php
+| Este archivo define las rutas REST utilizadas por Angular.
 |
-| Tipo:
-| BACKEND - Laravel / PHP
+| Recursos disponibles:
 |
-| Responsabilidad:
-|
-| Este archivo define las rutas HTTP de la API REST
-| utilizadas por el frontend Angular.
+| - Products
+| - Users
 |
 | Flujo:
 |
 | Angular
 |    ↓
-| ProductService
-|    ↓
 | HTTP Request
 |    ↓
-| routes/api.php
+| Laravel API
 |    ↓
-| ProductController
+| Controller
 |    ↓
-| Product Model
+| Model
 |    ↓
 | MongoDB
 |
 |--------------------------------------------------------------------------
 */
 
-
-/*
-|--------------------------------------------------------------------------
-| IMPORTACIÓN DEL CONTROLADOR
-|--------------------------------------------------------------------------
-|
-| ProductController contiene la lógica de negocio necesaria
-| para administrar los productos.
-|
-| Namespace:
-|
-| App\Http\Controllers\Api\ProductController
-|
-*/
-
 use App\Http\Controllers\Api\ProductController;
-
-
-/*
-|--------------------------------------------------------------------------
-| IMPORTACIÓN DE ROUTE
-|--------------------------------------------------------------------------
-|
-| Route permite registrar las rutas HTTP de Laravel.
-|
-*/
-
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
-
 
 /*
 |--------------------------------------------------------------------------
 | PRODUCT API
 |--------------------------------------------------------------------------
 |
-| Route::apiResource() genera automáticamente las rutas
-| REST principales para el recurso "products".
-|
-| Equivale conceptualmente a registrar:
+| CRUD completo de productos.
 |
 | GET       /api/products
 | POST      /api/products
@@ -83,15 +47,30 @@ use Illuminate\Support\Facades\Route;
 | PATCH     /api/products/{product}
 | DELETE    /api/products/{product}
 |
-| Todas las operaciones son dirigidas hacia:
-|
-| ProductController
-|
-|--------------------------------------------------------------------------
 */
-
 
 Route::apiResource(
     'products',
     ProductController::class
+);
+
+/*
+|--------------------------------------------------------------------------
+| USER API
+|--------------------------------------------------------------------------
+|
+| CRUD completo de usuarios.
+|
+| GET       /api/users
+| POST      /api/users
+| GET       /api/users/{user}
+| PUT       /api/users/{user}
+| PATCH     /api/users/{user}
+| DELETE    /api/users/{user}
+|
+*/
+
+Route::apiResource(
+    'users',
+    UserController::class
 );

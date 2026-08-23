@@ -1,234 +1,418 @@
 <?php
 
-// Indicamos el espacio de nombres al que pertenece este controlador.
 namespace App\Http\Controllers\Api;
 
-// Importamos Request para recibir información enviada mediante HTTP.
-use Illuminate\Http\Request;
+/*
+|--------------------------------------------------------------------------
+| TAP TERMINAL - USER CONTROLLER
+|--------------------------------------------------------------------------
+|
+| Este controlador administra los usuarios del sistema.
+|
+| Funcionalidades:
+|
+| - Listar usuarios
+| - Crear usuarios
+| - Consultar un usuario
+| - Actualizar usuarios
+| - Eliminar usuarios
+|
+| Seguridad:
+|
+| - Validación de datos
+| - Correo electrónico único
+| - Contraseña almacenada mediante hash
+| - Contraseña nunca expuesta en respuestas
+| - Foto de perfil almacenada en storage público
+|
+| Base de datos:
+|
+| MongoDB
+|
+|--------------------------------------------------------------------------
+*/
 
-// Importamos el modelo User para trabajar con la tabla de usuarios.
+use App\Http\Controllers\Controller;
 use App\Models\User;
-
-// Importamos Rule para crear reglas de validación avanzadas.
-use Illuminate\Validation\Rule;
-
-// Importamos Hash para proteger las contraseñas.
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
-
-// Declaramos nuestro controlador de usuarios.
-class UserController
+class UserController extends Controller
 {
     /**
+     * ============================================================
+     * LISTAR USUARIOS
+     * ============================================================
+     *
      * GET /api/users
      *
-     * Obtiene todos los usuarios registrados.
+     * Devuelve todos los usuarios registrados.
+     *
+     * La contraseña se encuentra protegida mediante el modelo
+     * User y nunca se devuelve en la respuesta JSON.
      */
-    public function index()
+    public function index(): JsonResponse
     {
-        // Consultamos todos los usuarios de la base de datos.
-        $users = User::all();
+        $users = User::query()
+            ->latest()
+            ->get();
 
-        // Ocultamos la contraseña por seguridad,
-        // incluso si el modelo User no la tuviera configurada como hidden.
-        $users->makeHidden(['password']);
-
-        // Devolvemos una respuesta HTTP en formato JSON.
         return response()->json([
-            // Mensaje descriptivo de la operación.
             'message' => 'Usuarios obtenidos correctamente.',
-
-            // Lista de usuarios encontrada.
             'data' => $users,
         ], 200);
     }
 
-
     /**
+     * ============================================================
+     * CREAR USUARIO
+     * ============================================================
+     *
      * POST /api/users
      *
-     * Crea un nuevo usuario.
+     * Content-Type:
+     * multipart/form-data
+     *
+     * Campos:
+     *
+     * name
+     * email
+     * phone
+     * password
+     * profile_photo
+     *
+     * El código del usuario se genera automáticamente.
      */
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
-        // Validamos los datos enviados por el cliente.
-        $validated = $request->validate([
+        /*
+        |--------------------------------------------------------------------------
+        | VALIDACIÓN
+        |--------------------------------------------------------------------------
+        */
 
-            // El nombre es obligatorio.
-            // Debe ser texto y tener como máximo 255 caracteres.
+        $validated = $request->validate([
             'name' => [
                 'required',
                 'string',
                 'max:255',
             ],
 
-            // El correo es obligatorio.
-            // Debe tener formato de correo electrónico.
-            // No puede superar 255 caracteres.
-            // Además, no puede estar registrado previamente.
             'email' => [
                 'required',
                 'email',
                 'max:255',
-                'unique:users,email',
             ],
 
-            // La contraseña es obligatoria.
-            // Debe ser texto y tener al menos 8 caracteres.
+            'phone' => [
+                'nullable',
+                'string',
+                'regex:/^\+[1-9]\d{7,14}$/',
+            ],
+
             'password' => [
                 'required',
                 'string',
                 'min:8',
             ],
+
+            'profile_photo' => [
+                'required',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:2048',
+            ],
         ]);
 
-        // Convertimos la contraseña en un hash seguro.
-        //
-        // IMPORTANTE:
-        // Nunca debemos guardar contraseñas directamente como texto plano.
-        $validated['password'] = Hash::make($validated['password']);
+        /*
+        |--------------------------------------------------------------------------
+        | EMAIL ÚNICO
+        |--------------------------------------------------------------------------
+        |
+        | MongoDB no utiliza aquí una migración SQL tradicional.
+        | Por eso hacemos la comprobación directamente mediante
+        | el modelo User.
+        |
+        */
 
-        // Creamos el usuario utilizando únicamente los datos validados.
-        $user = User::create($validated);
+        if (User::where('email', $validated['email'])->exists()) {
+            return response()->json([
+                'message' => 'El correo electrónico ya está registrado.',
+                'errors' => [
+                    'email' => [
+                        'El correo electrónico ya está registrado.',
+                    ],
+                ],
+            ], 422);
+        }
 
-        // Ocultamos la contraseña antes de devolver la respuesta.
-        $user->makeHidden(['password']);
+        /*
+        |--------------------------------------------------------------------------
+        | GENERACIÓN DEL CÓDIGO
+        |--------------------------------------------------------------------------
+        |
+        | El código NO viene del frontend.
+        |
+        | Se genera automáticamente en el backend.
+        |
+        | Ejemplo:
+        |
+        | USR-000001
+        | USR-000002
+        |
+        */
 
-        // Devolvemos HTTP 201 porque se creó un recurso nuevo.
+        $lastUser = User::query()
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        $nextNumber = 1;
+
+        if ($lastUser && ! empty($lastUser->code)) {
+            $lastNumber = (int) str_replace(
+                'USR-',
+                '',
+                $lastUser->code
+            );
+
+            $nextNumber = $lastNumber + 1;
+        }
+
+        $code = 'USR-'.str_pad(
+            (string) $nextNumber,
+            6,
+            '0',
+            STR_PAD_LEFT
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | FOTO DE PERFIL
+        |--------------------------------------------------------------------------
+        |
+        | Guardamos el archivo en:
+        |
+        | storage/app/public/profile-photos
+        |
+        | El método store() genera un nombre único.
+        |
+        */
+
+        $profilePhotoPath = $request
+            ->file('profile_photo')
+            ->store('profile-photos', 'public');
+
+        /*
+        |--------------------------------------------------------------------------
+        | CREACIÓN DEL USUARIO
+        |--------------------------------------------------------------------------
+        */
+
+        $user = User::create([
+            'code' => $code,
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'] ?? null,
+            'profile_photo' => $profilePhotoPath,
+
+            /*
+            |--------------------------------------------------------------------------
+            | SEGURIDAD
+            |--------------------------------------------------------------------------
+            |
+            | Nunca almacenamos la contraseña en texto plano.
+            |
+            */
+
+            'password' => Hash::make(
+                $validated['password']
+            ),
+        ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | RESPUESTA
+        |--------------------------------------------------------------------------
+        */
+
         return response()->json([
-            // Mensaje descriptivo.
             'message' => 'Usuario creado correctamente.',
-
-            // Información del usuario creado.
             'data' => $user,
         ], 201);
     }
 
-
     /**
-     * GET /api/users/{id}
+     * ============================================================
+     * CONSULTAR USUARIO
+     * ============================================================
      *
-     * Obtiene un usuario específico mediante su ID.
+     * GET /api/users/{id}
      */
-    public function show(int $id)
+    public function show(string $id): JsonResponse
     {
-        // Buscamos el usuario por su ID.
-        //
-        // findOrFail() tiene un comportamiento importante:
-        // si encuentra el usuario, continúa normalmente.
-        // si NO lo encuentra, Laravel devuelve HTTP 404.
         $user = User::findOrFail($id);
 
-        // Ocultamos la contraseña antes de enviar el usuario.
-        $user->makeHidden(['password']);
-
-        // Devolvemos el usuario encontrado.
         return response()->json([
-            // Mensaje descriptivo.
             'message' => 'Usuario obtenido correctamente.',
-
-            // Usuario encontrado.
             'data' => $user,
         ], 200);
     }
 
-
     /**
+     * ============================================================
+     * ACTUALIZAR USUARIO
+     * ============================================================
+     *
      * PUT /api/users/{id}
      *
-     * Actualiza un usuario existente.
+     * La contraseña es opcional durante la actualización.
      */
-    public function update(Request $request, int $id)
+    public function update(Request $request, string $id): JsonResponse
     {
-        // Buscamos el usuario que queremos modificar.
-        //
-        // Si el ID no existe, Laravel devuelve HTTP 404.
         $user = User::findOrFail($id);
 
-        // Validamos los datos recibidos.
         $validated = $request->validate([
-
-            // El nombre es obligatorio.
             'name' => [
                 'required',
                 'string',
                 'max:255',
             ],
 
-            // El correo es obligatorio y debe ser válido.
-            //
-            // Rule::unique() verifica que no exista otro usuario
-            // utilizando el mismo correo.
-            //
-            // ignore($user->id) permite que el usuario conserve
-            // su propio correo al actualizarse.
             'email' => [
                 'required',
                 'email',
                 'max:255',
-                Rule::unique('users', 'email')->ignore($user->id),
             ],
 
-            // La contraseña NO es obligatoria al actualizar.
-            //
-            // Si no se envía, conservaremos la contraseña actual.
-            //
-            // Si se envía, deberá tener mínimo 8 caracteres.
+            'phone' => [
+                'nullable',
+                'string',
+                'regex:/^\+[1-9]\d{7,14}$/',
+            ],
+
             'password' => [
                 'nullable',
                 'string',
                 'min:8',
             ],
+
+            'profile_photo' => [
+                'nullable',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:2048',
+            ],
         ]);
 
-        // Comprobamos si el cliente proporcionó una nueva contraseña.
-        if (!empty($validated['password'])) {
+        /*
+        |--------------------------------------------------------------------------
+        | VALIDAR EMAIL ÚNICO
+        |--------------------------------------------------------------------------
+        */
 
-            // Convertimos la nueva contraseña en un hash seguro.
-            $validated['password'] = Hash::make(
-                $validated['password']
-            );
+        $existingUser = User::where(
+            'email',
+            $validated['email']
+        )
+            ->where('_id', '!=', $user->getKey())
+            ->first();
 
-        } else {
-
-            // Si no enviaron contraseña,
-            // eliminamos el campo para conservar la contraseña actual.
-            unset($validated['password']);
+        if ($existingUser) {
+            return response()->json([
+                'message' => 'El correo electrónico ya está registrado.',
+                'errors' => [
+                    'email' => [
+                        'El correo electrónico ya está registrado.',
+                    ],
+                ],
+            ], 422);
         }
 
-        // Actualizamos únicamente los datos validados.
-        $user->update($validated);
+        /*
+        |--------------------------------------------------------------------------
+        | DATOS ACTUALIZABLES
+        |--------------------------------------------------------------------------
+        */
 
-        // Ocultamos la contraseña antes de devolver el resultado.
-        $user->makeHidden(['password']);
+        $user->name = $validated['name'];
+        $user->email = $validated['email'];
+        $user->phone = $validated['phone'] ?? null;
 
-        // Devolvemos HTTP 200 porque la actualización fue correcta.
+        /*
+        |--------------------------------------------------------------------------
+        | ACTUALIZAR CONTRASEÑA
+        |--------------------------------------------------------------------------
+        */
+
+        if (! empty($validated['password'])) {
+            $user->password = Hash::make(
+                $validated['password']
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | ACTUALIZAR FOTO
+        |--------------------------------------------------------------------------
+        */
+
+        if ($request->hasFile('profile_photo')) {
+            /*
+            | Eliminamos la fotografía anterior cuando existe.
+            */
+
+            if (! empty($user->profile_photo)) {
+                Storage::disk('public')->delete(
+                    $user->profile_photo
+                );
+            }
+
+            $user->profile_photo = $request
+                ->file('profile_photo')
+                ->store('profile-photos', 'public');
+        }
+
+        $user->save();
+
         return response()->json([
-            // Mensaje descriptivo.
             'message' => 'Usuario actualizado correctamente.',
-
-            // Usuario después de la actualización.
             'data' => $user,
         ], 200);
     }
 
-
     /**
-     * DELETE /api/users/{id}
+     * ============================================================
+     * ELIMINAR USUARIO
+     * ============================================================
      *
-     * Elimina un usuario existente.
+     * DELETE /api/users/{id}
      */
-    public function destroy(int $id)
+    public function destroy(string $id): JsonResponse
     {
-        // Buscamos el usuario mediante su ID.
-        //
-        // Si no existe, Laravel devuelve HTTP 404.
         $user = User::findOrFail($id);
 
-        // Eliminamos el usuario de la base de datos.
+        /*
+        |--------------------------------------------------------------------------
+        | ELIMINAR FOTO
+        |--------------------------------------------------------------------------
+        */
+
+        if (! empty($user->profile_photo)) {
+            Storage::disk('public')->delete(
+                $user->profile_photo
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | ELIMINAR USUARIO
+        |--------------------------------------------------------------------------
+        */
+
         $user->delete();
 
-        // Devolvemos un mensaje confirmando la eliminación.
         return response()->json([
             'message' => 'Usuario eliminado correctamente.',
         ], 200);

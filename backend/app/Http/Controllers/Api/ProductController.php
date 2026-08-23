@@ -53,7 +53,6 @@
 
 namespace App\Http\Controllers\Api;
 
-
 /*
 |--------------------------------------------------------------------------
 | CONTROLADOR BASE DE LARAVEL
@@ -65,8 +64,6 @@ namespace App\Http\Controllers\Api;
 */
 
 use App\Http\Controllers\Controller;
-
-
 /*
 |--------------------------------------------------------------------------
 | MODELO PRODUCT
@@ -77,8 +74,6 @@ use App\Http\Controllers\Controller;
 */
 
 use App\Models\Product;
-
-
 /*
 |--------------------------------------------------------------------------
 | JSON RESPONSE
@@ -90,8 +85,6 @@ use App\Models\Product;
 */
 
 use Illuminate\Http\JsonResponse;
-
-
 /*
 |--------------------------------------------------------------------------
 | HTTP REQUEST
@@ -103,7 +96,6 @@ use Illuminate\Http\JsonResponse;
 */
 
 use Illuminate\Http\Request;
-
 
 /**
  * ============================================================
@@ -122,10 +114,8 @@ use Illuminate\Http\Request;
  *
  * ============================================================
  */
-
 class ProductController extends Controller
 {
-
     /**
      * ========================================================
      * LISTAR PRODUCTOS
@@ -157,7 +147,6 @@ class ProductController extends Controller
      *
      * ========================================================
      */
-
     public function index(): JsonResponse
     {
 
@@ -172,7 +161,6 @@ class ProductController extends Controller
         */
 
         $products = Product::all();
-
 
         /*
         |--------------------------------------------------------------------------
@@ -190,7 +178,6 @@ class ProductController extends Controller
 
         return response()->json($products);
     }
-
 
     /**
      * ========================================================
@@ -224,7 +211,6 @@ class ProductController extends Controller
      *
      * ========================================================
      */
-
     public function store(Request $request): JsonResponse
     {
 
@@ -274,7 +260,6 @@ class ProductController extends Controller
 
         ]);
 
-
         /*
         |--------------------------------------------------------------------------
         | CREAR PRODUCTO
@@ -292,7 +277,6 @@ class ProductController extends Controller
         */
 
         $product = Product::create($validated);
-
 
         /*
         |--------------------------------------------------------------------------
@@ -314,7 +298,6 @@ class ProductController extends Controller
         );
     }
 
-
     /**
      * ========================================================
      * MOSTRAR PRODUCTO
@@ -334,7 +317,6 @@ class ProductController extends Controller
      *
      * ========================================================
      */
-
     public function show(string $id): JsonResponse
     {
 
@@ -350,7 +332,6 @@ class ProductController extends Controller
 
         $product = Product::find($id);
 
-
         /*
         |--------------------------------------------------------------------------
         | PRODUCTO NO ENCONTRADO
@@ -361,7 +342,7 @@ class ProductController extends Controller
         |
         */
 
-        if (!$product) {
+        if (! $product) {
 
             return response()->json([
 
@@ -369,7 +350,6 @@ class ProductController extends Controller
 
             ], 404);
         }
-
 
         /*
         |--------------------------------------------------------------------------
@@ -382,7 +362,6 @@ class ProductController extends Controller
 
         return response()->json($product);
     }
-
 
     /**
      * ========================================================
@@ -408,7 +387,6 @@ class ProductController extends Controller
      *
      * ========================================================
      */
-
     public function update(
         Request $request,
         string $id
@@ -422,14 +400,13 @@ class ProductController extends Controller
 
         $product = Product::find($id);
 
-
         /*
         |--------------------------------------------------------------------------
         | PRODUCTO NO ENCONTRADO
         |--------------------------------------------------------------------------
         */
 
-        if (!$product) {
+        if (! $product) {
 
             return response()->json([
 
@@ -437,7 +414,6 @@ class ProductController extends Controller
 
             ], 404);
         }
-
 
         /*
         |--------------------------------------------------------------------------
@@ -478,7 +454,6 @@ class ProductController extends Controller
 
         ]);
 
-
         /*
         |--------------------------------------------------------------------------
         | ACTUALIZAR
@@ -493,7 +468,6 @@ class ProductController extends Controller
 
         $product->update($validated);
 
-
         /*
         |--------------------------------------------------------------------------
         | RESPUESTA
@@ -507,7 +481,6 @@ class ProductController extends Controller
 
         return response()->json($product);
     }
-
 
     /**
      * ========================================================
@@ -528,7 +501,6 @@ class ProductController extends Controller
      *
      * ========================================================
      */
-
     public function destroy(string $id): JsonResponse
     {
 
@@ -540,14 +512,13 @@ class ProductController extends Controller
 
         $product = Product::find($id);
 
-
         /*
         |--------------------------------------------------------------------------
         | PRODUCTO NO ENCONTRADO
         |--------------------------------------------------------------------------
         */
 
-        if (!$product) {
+        if (! $product) {
 
             return response()->json([
 
@@ -555,7 +526,6 @@ class ProductController extends Controller
 
             ], 404);
         }
-
 
         /*
         |--------------------------------------------------------------------------
@@ -568,7 +538,6 @@ class ProductController extends Controller
         */
 
         $product->delete();
-
 
         /*
         |--------------------------------------------------------------------------

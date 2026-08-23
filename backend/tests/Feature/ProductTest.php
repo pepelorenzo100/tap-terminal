@@ -31,7 +31,6 @@
 
 namespace Tests\Feature;
 
-
 /*
 |--------------------------------------------------------------------------
 | TEST CASE
@@ -42,9 +41,7 @@ namespace Tests\Feature;
 |
 */
 
-use Tests\TestCase;
-
-
+use App\Models\Product;
 /*
 |--------------------------------------------------------------------------
 | PRODUCT MODEL
@@ -55,8 +52,7 @@ use Tests\TestCase;
 |
 */
 
-use App\Models\Product;
-
+use Tests\TestCase;
 
 /**
  * ============================================================
@@ -77,10 +73,8 @@ use App\Models\Product;
  *
  * ============================================================
  */
-
 class ProductTest extends TestCase
 {
-
     /**
      * ========================================================
      * CREAR PRODUCTO
@@ -99,7 +93,6 @@ class ProductTest extends TestCase
      *
      * ========================================================
      */
-
     public function test_can_create_product(): void
     {
 
@@ -119,7 +112,6 @@ class ProductTest extends TestCase
 
         ];
 
-
         /*
         |--------------------------------------------------------------------------
         | REALIZAR PETICIÓN POST
@@ -134,7 +126,6 @@ class ProductTest extends TestCase
 
         );
 
-
         /*
         |--------------------------------------------------------------------------
         | VERIFICAR RESPUESTA HTTP
@@ -147,7 +138,6 @@ class ProductTest extends TestCase
         */
 
         $response->assertStatus(201);
-
 
         /*
         |--------------------------------------------------------------------------
@@ -173,7 +163,6 @@ class ProductTest extends TestCase
 
         ]);
 
-
         /*
         |--------------------------------------------------------------------------
         | VERIFICAR DATOS
@@ -196,7 +185,6 @@ class ProductTest extends TestCase
 
         );
 
-
         /*
         |--------------------------------------------------------------------------
         | VERIFICAR CÓDIGO AUTOMÁTICO
@@ -210,7 +198,6 @@ class ProductTest extends TestCase
             $response->json('code')
 
         );
-
 
         /*
         |--------------------------------------------------------------------------
@@ -234,7 +221,6 @@ class ProductTest extends TestCase
 
     }
 
-
     /**
      * ========================================================
      * LISTAR PRODUCTOS
@@ -246,7 +232,6 @@ class ProductTest extends TestCase
      *
      * ========================================================
      */
-
     public function test_can_list_products(): void
     {
 
@@ -266,7 +251,6 @@ class ProductTest extends TestCase
 
         ]);
 
-
         /*
         |--------------------------------------------------------------------------
         | REALIZAR PETICIÓN GET
@@ -279,7 +263,6 @@ class ProductTest extends TestCase
 
         );
 
-
         /*
         |--------------------------------------------------------------------------
         | VERIFICAR RESPUESTA
@@ -288,7 +271,6 @@ class ProductTest extends TestCase
 
         $response->assertStatus(200);
 
-
         /*
         |--------------------------------------------------------------------------
         | VERIFICAR QUE SEA UN ARREGLO JSON
@@ -296,7 +278,6 @@ class ProductTest extends TestCase
         */
 
         $response->assertJsonIsArray();
-
 
         /*
         |--------------------------------------------------------------------------
@@ -314,7 +295,6 @@ class ProductTest extends TestCase
 
     }
 
-
     /**
      * ========================================================
      * MOSTRAR PRODUCTO
@@ -326,7 +306,6 @@ class ProductTest extends TestCase
      *
      * ========================================================
      */
-
     public function test_can_show_product(): void
     {
 
@@ -346,7 +325,6 @@ class ProductTest extends TestCase
 
         ]);
 
-
         /*
         |--------------------------------------------------------------------------
         | CONSULTAR PRODUCTO
@@ -355,10 +333,9 @@ class ProductTest extends TestCase
 
         $response = $this->getJson(
 
-            '/api/products/' . $product->id
+            '/api/products/'.$product->id
 
         );
-
 
         /*
         |--------------------------------------------------------------------------
@@ -367,7 +344,6 @@ class ProductTest extends TestCase
         */
 
         $response->assertStatus(200);
-
 
         /*
         |--------------------------------------------------------------------------
@@ -387,7 +363,6 @@ class ProductTest extends TestCase
 
     }
 
-
     /**
      * ========================================================
      * ACTUALIZAR PRODUCTO
@@ -399,7 +374,6 @@ class ProductTest extends TestCase
      *
      * ========================================================
      */
-
     public function test_can_update_product(): void
     {
 
@@ -419,7 +393,6 @@ class ProductTest extends TestCase
 
         ]);
 
-
         /*
         |--------------------------------------------------------------------------
         | GUARDAR CÓDIGO ORIGINAL
@@ -430,7 +403,6 @@ class ProductTest extends TestCase
         */
 
         $originalCode = $product->code;
-
 
         /*
         |--------------------------------------------------------------------------
@@ -448,7 +420,6 @@ class ProductTest extends TestCase
 
         ];
 
-
         /*
         |--------------------------------------------------------------------------
         | REALIZAR PETICIÓN PUT
@@ -457,12 +428,11 @@ class ProductTest extends TestCase
 
         $response = $this->putJson(
 
-            '/api/products/' . $product->id,
+            '/api/products/'.$product->id,
 
             $data
 
         );
-
 
         /*
         |--------------------------------------------------------------------------
@@ -471,7 +441,6 @@ class ProductTest extends TestCase
         */
 
         $response->assertStatus(200);
-
 
         /*
         |--------------------------------------------------------------------------
@@ -495,7 +464,6 @@ class ProductTest extends TestCase
 
         );
 
-
         /*
         |--------------------------------------------------------------------------
         | VERIFICAR QUE EL CÓDIGO NO CAMBIÓ
@@ -512,7 +480,6 @@ class ProductTest extends TestCase
 
     }
 
-
     /**
      * ========================================================
      * ELIMINAR PRODUCTO
@@ -524,7 +491,6 @@ class ProductTest extends TestCase
      *
      * ========================================================
      */
-
     public function test_can_delete_product(): void
     {
 
@@ -544,7 +510,6 @@ class ProductTest extends TestCase
 
         ]);
 
-
         /*
         |--------------------------------------------------------------------------
         | REALIZAR PETICIÓN DELETE
@@ -553,10 +518,9 @@ class ProductTest extends TestCase
 
         $response = $this->deleteJson(
 
-            '/api/products/' . $product->id
+            '/api/products/'.$product->id
 
         );
-
 
         /*
         |--------------------------------------------------------------------------
@@ -566,7 +530,6 @@ class ProductTest extends TestCase
 
         $response->assertStatus(200);
 
-
         /*
         |--------------------------------------------------------------------------
         | VERIFICAR MENSAJE
@@ -575,11 +538,9 @@ class ProductTest extends TestCase
 
         $response->assertJson([
 
-            'message' =>
-                'Producto eliminado correctamente.',
+            'message' => 'Producto eliminado correctamente.',
 
         ]);
-
 
         /*
         |--------------------------------------------------------------------------
@@ -601,7 +562,6 @@ class ProductTest extends TestCase
 
     }
 
-
     /**
      * ========================================================
      * VALIDAR DATOS
@@ -612,7 +572,6 @@ class ProductTest extends TestCase
      *
      * ========================================================
      */
-
     public function test_cannot_create_product_with_invalid_data(): void
     {
 
@@ -632,7 +591,6 @@ class ProductTest extends TestCase
 
         ];
 
-
         /*
         |--------------------------------------------------------------------------
         | REALIZAR PETICIÓN
@@ -647,7 +605,6 @@ class ProductTest extends TestCase
 
         );
 
-
         /*
         |--------------------------------------------------------------------------
         | HTTP 422
@@ -659,7 +616,6 @@ class ProductTest extends TestCase
         */
 
         $response->assertStatus(422);
-
 
         /*
         |--------------------------------------------------------------------------
@@ -678,5 +634,4 @@ class ProductTest extends TestCase
         ]);
 
     }
-
 }
