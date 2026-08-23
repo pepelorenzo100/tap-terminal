@@ -15,7 +15,7 @@
 | Responsabilidad:
 |
 | Verificar directamente el funcionamiento de la API
-| REST de productos.
+| REST de productos utilizando autenticación Laravel Sanctum.
 |
 | Las pruebas comprueban:
 |
@@ -26,10 +26,54 @@
 | 5. Eliminar un producto.
 | 6. Validar datos incorrectos.
 |
+| Seguridad:
+|
+| Todas las rutas de productos requieren:
+|
+|     auth:sanctum
+|
+| Por eso cada prueba CRUD crea un usuario de prueba,
+| inicia sesión y utiliza el token Bearer obtenido.
+|
 |--------------------------------------------------------------------------
 */
 
 namespace Tests\Feature;
+
+/*
+|--------------------------------------------------------------------------
+| PRODUCT MODEL
+|--------------------------------------------------------------------------
+|
+| Modelo utilizado para crear y verificar productos
+| almacenados en MongoDB.
+|
+*/
+
+use App\Models\Product;
+
+/*
+|--------------------------------------------------------------------------
+| USER MODEL
+|--------------------------------------------------------------------------
+|
+| Usuario utilizado para autenticarse durante las pruebas.
+|
+*/
+
+use App\Models\User;
+
+/*
+|--------------------------------------------------------------------------
+| HASH
+|--------------------------------------------------------------------------
+|
+| Permite crear una contraseña válida para el usuario
+| utilizado durante las pruebas.
+|
+*/
+
+use Illuminate\Support\Facades\Hash;
 
 /*
 |--------------------------------------------------------------------------
@@ -41,18 +85,8 @@ namespace Tests\Feature;
 |
 */
 
-use App\Models\Product;
-/*
-|--------------------------------------------------------------------------
-| PRODUCT MODEL
-|--------------------------------------------------------------------------
-|
-| Modelo utilizado para verificar los documentos
-| almacenados en MongoDB.
-|
-*/
-
 use Tests\TestCase;
+
 
 /**
  * ============================================================
@@ -65,6 +99,8 @@ use Tests\TestCase;
  *
  * HTTP
  *   ↓
+ * Sanctum
+ *   ↓
  * ProductController
  *   ↓
  * Product
@@ -75,6 +111,123 @@ use Tests\TestCase;
  */
 class ProductTest extends TestCase
 {
+    /**
+     * ========================================================
+     * PREPARAR CADA PRUEBA
+     * ========================================================
+     *
+     * Cada prueba comienza con un usuario de autenticación
+     * independiente.
+     *
+     * También eliminamos los productos existentes para evitar
+     * que una prueba dependa de otra.
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        /*
+        |--------------------------------------------------------------------------
+        | LIMPIAR PRODUCTOS
+        |--------------------------------------------------------------------------
+        |
+        | Eliminamos los productos existentes antes de cada prueba.
+        |
+        */
+
+        Product::query()->delete();
+
+        /*
+        |--------------------------------------------------------------------------
+        | LIMPIAR USUARIOS
+        |--------------------------------------------------------------------------
+        |
+        | Eliminamos usuarios anteriores para mantener
+        | las pruebas aisladas.
+        |
+        */
+
+        User::query()->delete();
+    }
+
+
+    /**
+     * ========================================================
+     * CREAR USUARIO AUTENTICADO
+     * ========================================================
+     *
+     * Crea un usuario exclusivamente para las pruebas
+     * protegidas mediante Sanctum.
+     *
+     * El usuario se crea directamente en MongoDB y después
+     * se utiliza el endpoint real /api/login para obtener
+     * un token Bearer.
+     *
+     * De esta manera las pruebas utilizan el mismo flujo
+     * de autenticación que utiliza Angular.
+     */
+    private function authenticate(): string
+    {
+        /*
+        |--------------------------------------------------------------------------
+        | CREAR USUARIO
+        |--------------------------------------------------------------------------
+        */
+
+        $user = User::create([
+            'code' => 'USR-'.fake()->unique()->numerify('######'),
+
+            'name' => 'Usuario Product Test',
+
+            'email' => fake()->unique()->safeEmail(),
+
+            'phone' => '+523141234567',
+
+            'password' => Hash::make(
+                'Password123!'
+            ),
+        ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | REALIZAR LOGIN
+        |--------------------------------------------------------------------------
+        |
+        | Utilizamos el endpoint real de autenticación.
+        |
+        */
+
+        $response = $this->postJson(
+            '/api/login',
+            [
+                'email' => $user->email,
+
+                'password' => 'Password123!',
+
+                'device_name' => 'TAP Terminal Product Test',
+            ]
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | COMPROBAR LOGIN
+        |--------------------------------------------------------------------------
+        */
+
+        $response->assertOk();
+
+        /*
+        |--------------------------------------------------------------------------
+        | OBTENER TOKEN
+        |--------------------------------------------------------------------------
+        */
+
+        return $response->json(
+            'data.token'
+        );
+    }
+
+
     /**
      * ========================================================
      * CREAR PRODUCTO
@@ -95,6 +248,13 @@ class ProductTest extends TestCase
      */
     public function test_can_create_product(): void
     {
+        /*
+        |--------------------------------------------------------------------------
+        | AUTENTICACIÓN
+        |--------------------------------------------------------------------------
+        */
+
+        $token = $this->authenticate();
 
         /*
         |--------------------------------------------------------------------------
@@ -103,28 +263,29 @@ class ProductTest extends TestCase
         */
 
         $data = [
-
             'name' => 'Producto de prueba',
 
             'brand' => 'TAP',
 
             'price' => 250.00,
-
         ];
 
         /*
         |--------------------------------------------------------------------------
         | REALIZAR PETICIÓN POST
         |--------------------------------------------------------------------------
+        |
+        | withToken() agrega:
+        |
+        | Authorization: Bearer TOKEN
+        |
         */
 
-        $response = $this->postJson(
-
-            '/api/products',
-
-            $data
-
-        );
+        $response = $this->withToken($token)
+            ->postJson(
+                '/api/products',
+                $data
+            );
 
         /*
         |--------------------------------------------------------------------------
@@ -133,7 +294,7 @@ class ProductTest extends TestCase
         |
         | 201 significa:
         |
-        | "Created"
+        | Created
         |
         */
 
@@ -146,21 +307,13 @@ class ProductTest extends TestCase
         */
 
         $response->assertJsonStructure([
-
             'id',
-
             'name',
-
             'brand',
-
             'price',
-
             'code',
-
             'created_at',
-
             'updated_at',
-
         ]);
 
         /*
@@ -170,19 +323,13 @@ class ProductTest extends TestCase
         */
 
         $response->assertJsonPath(
-
             'name',
-
             'Producto de prueba'
-
         );
 
         $response->assertJsonPath(
-
             'brand',
-
             'TAP'
-
         );
 
         /*
@@ -192,11 +339,8 @@ class ProductTest extends TestCase
         */
 
         $this->assertStringStartsWith(
-
             'PROD-',
-
             $response->json('code')
-
         );
 
         /*
@@ -206,20 +350,15 @@ class ProductTest extends TestCase
         */
 
         $this->assertDatabaseHas(
-
             'products',
-
             [
-
                 'name' => 'Producto de prueba',
 
                 'brand' => 'TAP',
-
             ]
-
         );
-
     }
+
 
     /**
      * ========================================================
@@ -234,6 +373,13 @@ class ProductTest extends TestCase
      */
     public function test_can_list_products(): void
     {
+        /*
+        |--------------------------------------------------------------------------
+        | AUTENTICACIÓN
+        |--------------------------------------------------------------------------
+        */
+
+        $token = $this->authenticate();
 
         /*
         |--------------------------------------------------------------------------
@@ -242,13 +388,11 @@ class ProductTest extends TestCase
         */
 
         Product::create([
-
             'name' => 'Producto listado',
 
             'brand' => 'TAP',
 
             'price' => 100.00,
-
         ]);
 
         /*
@@ -257,11 +401,10 @@ class ProductTest extends TestCase
         |--------------------------------------------------------------------------
         */
 
-        $response = $this->getJson(
-
-            '/api/products'
-
-        );
+        $response = $this->withToken($token)
+            ->getJson(
+                '/api/products'
+            );
 
         /*
         |--------------------------------------------------------------------------
@@ -286,14 +429,12 @@ class ProductTest extends TestCase
         */
 
         $response->assertJsonFragment([
-
             'name' => 'Producto listado',
 
             'brand' => 'TAP',
-
         ]);
-
     }
+
 
     /**
      * ========================================================
@@ -308,6 +449,13 @@ class ProductTest extends TestCase
      */
     public function test_can_show_product(): void
     {
+        /*
+        |--------------------------------------------------------------------------
+        | AUTENTICACIÓN
+        |--------------------------------------------------------------------------
+        */
+
+        $token = $this->authenticate();
 
         /*
         |--------------------------------------------------------------------------
@@ -316,13 +464,11 @@ class ProductTest extends TestCase
         */
 
         $product = Product::create([
-
             'name' => 'Producto individual',
 
             'brand' => 'TAP',
 
             'price' => 300.00,
-
         ]);
 
         /*
@@ -331,11 +477,10 @@ class ProductTest extends TestCase
         |--------------------------------------------------------------------------
         */
 
-        $response = $this->getJson(
-
-            '/api/products/'.$product->id
-
-        );
+        $response = $this->withToken($token)
+            ->getJson(
+                '/api/products/'.$product->id
+            );
 
         /*
         |--------------------------------------------------------------------------
@@ -352,16 +497,14 @@ class ProductTest extends TestCase
         */
 
         $response->assertJson([
-
             'id' => (string) $product->id,
 
             'name' => 'Producto individual',
 
             'brand' => 'TAP',
-
         ]);
-
     }
+
 
     /**
      * ========================================================
@@ -376,6 +519,13 @@ class ProductTest extends TestCase
      */
     public function test_can_update_product(): void
     {
+        /*
+        |--------------------------------------------------------------------------
+        | AUTENTICACIÓN
+        |--------------------------------------------------------------------------
+        */
+
+        $token = $this->authenticate();
 
         /*
         |--------------------------------------------------------------------------
@@ -384,13 +534,11 @@ class ProductTest extends TestCase
         */
 
         $product = Product::create([
-
             'name' => 'Producto original',
 
             'brand' => 'TAP',
 
             'price' => 200.00,
-
         ]);
 
         /*
@@ -411,13 +559,11 @@ class ProductTest extends TestCase
         */
 
         $data = [
-
             'name' => 'Producto actualizado',
 
             'brand' => 'TAP',
 
             'price' => 450.00,
-
         ];
 
         /*
@@ -426,13 +572,11 @@ class ProductTest extends TestCase
         |--------------------------------------------------------------------------
         */
 
-        $response = $this->putJson(
-
-            '/api/products/'.$product->id,
-
-            $data
-
-        );
+        $response = $this->withToken($token)
+            ->putJson(
+                '/api/products/'.$product->id,
+                $data
+            );
 
         /*
         |--------------------------------------------------------------------------
@@ -449,19 +593,13 @@ class ProductTest extends TestCase
         */
 
         $response->assertJsonPath(
-
             'name',
-
             'Producto actualizado'
-
         );
 
         $response->assertJsonPath(
-
             'brand',
-
             'TAP'
-
         );
 
         /*
@@ -471,14 +609,11 @@ class ProductTest extends TestCase
         */
 
         $response->assertJsonPath(
-
             'code',
-
             $originalCode
-
         );
-
     }
+
 
     /**
      * ========================================================
@@ -493,6 +628,13 @@ class ProductTest extends TestCase
      */
     public function test_can_delete_product(): void
     {
+        /*
+        |--------------------------------------------------------------------------
+        | AUTENTICACIÓN
+        |--------------------------------------------------------------------------
+        */
+
+        $token = $this->authenticate();
 
         /*
         |--------------------------------------------------------------------------
@@ -501,13 +643,11 @@ class ProductTest extends TestCase
         */
 
         $product = Product::create([
-
             'name' => 'Producto para eliminar',
 
             'brand' => 'TAP',
 
             'price' => 150.00,
-
         ]);
 
         /*
@@ -516,11 +656,10 @@ class ProductTest extends TestCase
         |--------------------------------------------------------------------------
         */
 
-        $response = $this->deleteJson(
-
-            '/api/products/'.$product->id
-
-        );
+        $response = $this->withToken($token)
+            ->deleteJson(
+                '/api/products/'.$product->id
+            );
 
         /*
         |--------------------------------------------------------------------------
@@ -537,9 +676,7 @@ class ProductTest extends TestCase
         */
 
         $response->assertJson([
-
             'message' => 'Producto eliminado correctamente.',
-
         ]);
 
         /*
@@ -549,18 +686,13 @@ class ProductTest extends TestCase
         */
 
         $this->assertDatabaseMissing(
-
             'products',
-
             [
-
                 '_id' => $product->id,
-
             ]
-
         );
-
     }
+
 
     /**
      * ========================================================
@@ -570,10 +702,24 @@ class ProductTest extends TestCase
      * Verifica que Laravel rechace un producto
      * con datos inválidos.
      *
+     * IMPORTANTE:
+     *
+     * La petición sigue necesitando autenticación.
+     *
+     * Primero Sanctum valida el token y después Laravel
+     * ejecuta las reglas de validación.
+     *
      * ========================================================
      */
     public function test_cannot_create_product_with_invalid_data(): void
     {
+        /*
+        |--------------------------------------------------------------------------
+        | AUTENTICACIÓN
+        |--------------------------------------------------------------------------
+        */
+
+        $token = $this->authenticate();
 
         /*
         |--------------------------------------------------------------------------
@@ -582,13 +728,11 @@ class ProductTest extends TestCase
         */
 
         $data = [
-
             'name' => '',
 
             'brand' => '',
 
             'price' => 5000,
-
         ];
 
         /*
@@ -597,13 +741,11 @@ class ProductTest extends TestCase
         |--------------------------------------------------------------------------
         */
 
-        $response = $this->postJson(
-
-            '/api/products',
-
-            $data
-
-        );
+        $response = $this->withToken($token)
+            ->postJson(
+                '/api/products',
+                $data
+            );
 
         /*
         |--------------------------------------------------------------------------
@@ -624,14 +766,11 @@ class ProductTest extends TestCase
         */
 
         $response->assertJsonValidationErrors([
-
             'name',
 
             'brand',
 
             'price',
-
         ]);
-
     }
 }
