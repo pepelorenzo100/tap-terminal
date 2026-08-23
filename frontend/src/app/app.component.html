@@ -1,88 +1,32 @@
 <!--
-  Plantilla HTML principal de la aplicación.
-
-  Este archivo pertenece al AppComponent, que es el
-  componente raíz de nuestra aplicación Angular.
-
-  La responsabilidad principal de esta plantilla es
-  proporcionar el contenedor donde Angular podrá
-  renderizar las diferentes páginas mediante el Router.
-
-  La navegación real se irá construyendo mediante:
-  n 
-  app.routes.ts
-      ↓
-  Router
-      ↓
-  router-outlet
-      ↓
-  Componente correspondiente a la URL actual
+  ============================================================
+  TAP TERMINAL
+  APP ROOT TEMPLATE
+  ============================================================
 -->
 
-<!--
-  Contenedor principal de la aplicación.
+<!-- ==========================================================
+     MENÚ PRINCIPAL
+     ========================================================== -->
 
-  La clase "app-container" nos permitirá posteriormente
-  aplicar estilos globales de estructura mediante CSS.
--->
-<div class="app-container">
+<app-navbar></app-navbar>
 
-  <!--
-    Encabezado principal de la aplicación.
 
-    Por el momento solamente mostramos el nombre
-    del sistema.
+<!-- ==========================================================
+     CONTENEDOR DE RUTAS
+     ==========================================================
 
-    Posteriormente podremos convertir este encabezado
-    en nuestro menú principal de navegación.
-  -->
-  <header class="app-header">
+     Angular cargará aquí:
 
-    <!--
-      Título principal de la aplicación.
-    -->
-    <h1>TAP Terminal</h1>
+         /products
+         /users
+         /login
 
-    <!--
-      Descripción breve del sistema.
+     según la ruta seleccionada.
+     ========================================================== -->
 
-      Esta información es temporal y posteriormente
-      podrá formar parte del diseño definitivo.
-    -->
-    <p>Sistema de administración</p>
+<main class="app-content">
 
-  </header>
+  <router-outlet></router-outlet>
 
-  <!--
-    Área principal de contenido.
-
-    Dentro de este elemento se renderizarán las diferentes
-    pantallas de nuestra aplicación.
-  -->
-  <main class="app-content">
-
-    <!--
-      RouterOutlet es un componente/directiva de Angular
-      que funciona como punto de inserción para las rutas.
-
-      Cuando posteriormente definamos:
-
-      /products
-
-      Angular cargará ProductsComponent dentro de este lugar.
-
-      Conceptualmente:
-
-      URL
-       ↓
-      Angular Router
-       ↓
-      RouterOutlet
-       ↓
-      Componente correspondiente
-    -->
-    <router-outlet></router-outlet>
-
-  </main>
-
-</div>
+</main>

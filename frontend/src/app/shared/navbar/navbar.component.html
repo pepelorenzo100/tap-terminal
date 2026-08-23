@@ -1,0 +1,95 @@
+<!--
+  ============================================================
+  TAP TERMINAL
+  NAVBAR
+  ============================================================
+
+  Menú principal del sistema.
+
+  Navegación:
+
+      /products
+      /users
+
+  La navegación utiliza Angular Router.
+
+  El botón de cerrar sesión utiliza AuthService
+  mediante NavbarComponent.
+  ============================================================
+-->
+
+<nav class="navbar">
+
+  <!-- ========================================================
+       IDENTIDAD DEL SISTEMA
+       ======================================================== -->
+
+  <div class="navbar-brand">
+
+    <a
+      routerLink="/products"
+      class="navbar-title"
+    >
+      TAP Terminal
+    </a>
+
+    <span class="navbar-subtitle">
+      Sistema de administración
+    </span>
+
+  </div>
+
+
+  <!-- ========================================================
+       MENÚ PRINCIPAL
+       ======================================================== -->
+
+  @if (isAuthenticated) {
+
+    <div class="navbar-menu">
+
+      <!-- ====================================================
+           PRODUCTOS
+           ==================================================== -->
+
+      <a
+        routerLink="/products"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="navbar-link"
+      >
+        Productos
+      </a>
+
+
+      <!-- ====================================================
+           USUARIOS
+           ==================================================== -->
+
+      <a
+        routerLink="/users"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="navbar-link"
+      >
+        Usuarios
+      </a>
+
+
+      <!-- ====================================================
+           CERRAR SESIÓN
+           ==================================================== -->
+
+      <button
+        type="button"
+        class="navbar-logout"
+        (click)="logout()"
+      >
+        Cerrar sesión
+      </button>
+
+    </div>
+
+  }
+
+</nav>

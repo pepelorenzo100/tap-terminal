@@ -1,178 +1,114 @@
-/*
+/**
  * ============================================================
+ * TAP TERMINAL
  * APP COMPONENT
  * ============================================================
  *
- * Componente raíz de la aplicación Angular.
+ * Componente raíz de la aplicación.
  *
- * AppComponent es el componente principal que Angular carga
- * cuando inicia nuestra aplicación.
+ * Responsabilidades:
  *
- * Su responsabilidad es servir como contenedor raíz de la
- * aplicación y proporcionar el punto donde se renderizan
- * las diferentes vistas mediante Angular Router.
+ *     - Mostrar el menú principal.
+ *     - Proporcionar el RouterOutlet.
+ *     - Servir como contenedor común de las páginas.
  *
- * IMPORTANTE:
+ * Arquitectura:
  *
- * La lógica específica de productos NO pertenece a este
- * componente.
+ *     AppComponent
+ *          |
+ *          +----> NavbarComponent
+ *          |
+ *          +----> RouterOutlet
+ *                         |
+ *                         +----> /products
+ *                         |
+ *                         +----> /users
  *
- * Posteriormente tendremos componentes especializados para
- * trabajar con productos, los cuales utilizarán
- * ProductService para comunicarse con la API REST de Laravel.
- *
- * De esta manera mantenemos una separación clara de
- * responsabilidades:
- *
- * AppComponent
- *     ↓
- * Contenedor principal
- *
- * ProductsComponent
- *     ↓
- * Interfaz de productos
- *
- * ProductService
- *     ↓
- * Comunicación HTTP
- *
- * Laravel API
- *     ↓
- * Base de datos
+ * ============================================================
  */
 
+import {
+  Component
+} from '@angular/core';
 
-/*
- * ============================================================
- * IMPORTACIONES
- * ============================================================
- *
- * Component:
- *
- * Es el decorador que permite declarar una clase como un
- * componente de Angular.
- *
- * RouterOutlet:
- *
- * Es el componente/directiva que funciona como punto de
- * inserción para las vistas administradas por Angular Router.
- *
- * Por ejemplo:
- *
- * /products
- *      ↓
- * Angular Router
- *      ↓
- * ProductsComponent
- *      ↓
- * router-outlet
- */
-import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import {
+  RouterOutlet
+} from '@angular/router';
+
+import {
+  NavbarComponent
+} from './shared/navbar/navbar.component';
 
 
-/*
+/**
  * ============================================================
  * APP COMPONENT
  * ============================================================
- *
- * @Component es el decorador que proporciona a Angular la
- * configuración necesaria para convertir esta clase en un
- * componente.
  */
+
 @Component({
 
-  /*
-   * standalone:
-   *
-   * Indica que el componente utiliza la arquitectura
-   * standalone de Angular.
-   *
-   * En esta arquitectura no necesitamos declarar el componente
-   * dentro de un NgModule tradicional.
+  /**
+   * Elemento raíz utilizado por Angular.
    */
-  standalone: true,
 
-
-  /*
-   * selector:
-   *
-   * Define el elemento HTML que representa este componente.
-   *
-   * Angular utiliza "app-root" como elemento raíz de la
-   * aplicación.
-   *
-   * Este elemento se encuentra en:
-   *
-   * src/index.html
-   */
   selector: 'app-root',
 
 
-  /*
-   * imports:
-   *
-   * Contiene las dependencias que necesita directamente la
-   * plantilla de este componente.
-   *
-   * RouterOutlet es necesario porque app.component.html
-   * utiliza:
-   *
-   * <router-outlet></router-outlet>
-   *
-   * Sin esta importación Angular no podría reconocer
-   * RouterOutlet dentro de la plantilla.
+  /**
+   * Aplicación standalone.
    */
+
+  standalone: true,
+
+
+  /**
+   * Componentes/directivas utilizados
+   * directamente por app.component.html.
+   */
+
   imports: [
+
+    /**
+     * Menú principal.
+     */
+
+    NavbarComponent,
+
+
+    /**
+     * Contenedor de las rutas.
+     */
+
     RouterOutlet
+
   ],
 
 
-  /*
-   * templateUrl:
-   *
-   * Indica que la estructura HTML del componente se encuentra
-   * en un archivo externo.
-   *
-   * Esto permite separar:
-   *
-   * TypeScript → lógica
-   * HTML       → estructura
-   * CSS        → presentación
+  /**
+   * Plantilla principal.
    */
-  templateUrl: './app.component.html',
+
+  templateUrl:
+    './app.component.html',
 
 
-  /*
-   * styleUrl:
-   *
-   * Indica el archivo CSS asociado específicamente con este
-   * componente.
-   *
-   * Los estilos se mantienen separados del HTML para conservar
-   * una estructura organizada y facilitar el mantenimiento.
+  /**
+   * Estilos del componente raíz.
    */
-  styleUrl: './app.component.css'
+
+  styleUrl:
+    './app.component.css'
 
 })
 
 
-/*
+/**
  * ============================================================
- * CLASE APP COMPONENT
+ * CLASE
  * ============================================================
- *
- * Esta clase representa el componente raíz de nuestra
- * aplicación.
- *
- * Actualmente no necesitamos lógica adicional dentro de la
- * clase porque su responsabilidad principal es proporcionar
- * el contenedor de la aplicación y el RouterOutlet.
- *
- * Conforme el proyecto crezca, evitaremos colocar aquí lógica
- * específica de productos para mantener una arquitectura
- * limpia.
  */
+
 export class AppComponent {
 
 }
