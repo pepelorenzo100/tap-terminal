@@ -1,160 +1,55 @@
-<!--
-============================================================
-TAP TERMINAL
-MÓDULO DE ADMINISTRACIÓN DE PRODUCTOS
-============================================================
-
-Archivo:
-products.component.html
-
-Tipo:
-FRONTEND - Angular / HTML
-
-Descripción:
-Vista principal del módulo de administración de productos.
-
-Responsabilidades:
-
-1. Mostrar la lista de productos.
-2. Crear productos.
-3. Editar productos.
-4. Visualizar el detalle de un producto.
-5. Eliminar productos.
-6. Mostrar mensajes del sistema.
-7. Validar los datos del formulario.
-8. Exportar productos a Excel.
-9. Exportar productos a PDF.
-10. Mostrar una interfaz adaptable a diferentes tamaños
-    de pantalla.
-
-Arquitectura:
-
-    products.component.html
-              │
-              ▼
-    products.component.ts
-              │
-              ▼
-    product.service.ts
-              │
-              ▼
-        Laravel API
-              │
-              ▼
-         Base de datos
-
-IMPORTANTE:
-
-Este archivo contiene únicamente la presentación y las
-interacciones de la interfaz.
-
-La lógica de negocio y comunicación HTTP se encuentra
-en:
-
-    products.component.ts
-    product.service.ts
-
-============================================================
--->
-
-
-<!-- ========================================================
-     CONTENEDOR PRINCIPAL
-     ========================================================
-
-     Agrupa todo el contenido del módulo de productos.
-
-     La apariencia visual se controla mediante:
-
-     products.component.css
-
-     ======================================================== -->
+<!-- =========================================================
+     TAP TERMINAL
+     MÓDULO DE ADMINISTRACIÓN DE PRODUCTOS
+     ========================================================= -->
 
 <main class="products-container">
 
 
-  <!-- ======================================================
-       ENCABEZADO DEL MÓDULO
-       ======================================================
+  <!-- =======================================================
+       ENCABEZADO
+       ======================================================= -->
 
-       Contiene:
-
-       - Título del módulo.
-       - Descripción.
-       - Acciones principales.
-
-       ====================================================== -->
-
-  <section
-    class="products-header"
-    aria-labelledby="products-title"
-  >
-
-
-    <!-- ====================================================
-         INFORMACIÓN DEL MÓDULO
-         ==================================================== -->
+  <header class="products-header">
 
     <div>
 
-      <h1 id="products-title">
+      <h1>
         Productos
       </h1>
 
       <p>
-        Administración de productos del sistema TAP Terminal
+        Administración de productos del sistema TAP Terminal.
       </p>
 
     </div>
 
 
-    <!-- ====================================================
-         ACCIONES PRINCIPALES
-         ==================================================== -->
+    <!-- =====================================================
+         ACCIONES
+         ===================================================== -->
 
-    <div
-      class="header-actions"
-      aria-label="Acciones de productos"
-    >
+    <div class="header-actions">
 
 
-      <!-- ==================================================
+      <!-- ===================================================
            NUEVO PRODUCTO
-           ==================================================
-
-           Ejecuta:
-
-               showCreateForm()
-
-           El botón solamente se muestra cuando el formulario
-           no está abierto.
-
-           ================================================== -->
+           =================================================== -->
 
       <button
         type="button"
         class="btn-primary"
         (click)="showCreateForm()"
-        *ngIf="!showForm"
       >
 
-        + Nuevo producto
+        Nuevo producto
 
       </button>
 
 
-      <!-- ==================================================
-           EXPORTAR EXCEL
-           ==================================================
-
-           Ejecuta:
-
-               exportToExcel()
-
-           La generación del archivo se realiza directamente
-           en Angular mediante la biblioteca XLSX.
-
-           ================================================== -->
+      <!-- ===================================================
+           EXCEL
+           =================================================== -->
 
       <button
         type="button"
@@ -167,18 +62,9 @@ en:
       </button>
 
 
-      <!-- ==================================================
-           EXPORTAR PDF
-           ==================================================
-
-           Ejecuta:
-
-               exportToPDF()
-
-           El archivo se genera directamente en el navegador
-           mediante jsPDF y jspdf-autotable.
-
-           ================================================== -->
+      <!-- ===================================================
+           PDF
+           =================================================== -->
 
       <button
         type="button"
@@ -190,30 +76,30 @@ en:
 
       </button>
 
+
+      <!-- ===================================================
+           LOGOUT
+           =================================================== -->
+
+      <button
+        type="button"
+        class="btn-logout"
+        (click)="logout()"
+        aria-label="Cerrar sesión"
+      >
+
+        Cerrar sesión
+
+      </button>
+
     </div>
 
-  </section>
+  </header>
 
 
-  <!-- ======================================================
-       MENSAJES DEL SISTEMA
-       ======================================================
-
-       La sección se muestra únicamente cuando:
-
-           message !== ''
-
-       Tipos disponibles:
-
-           success
-           error
-           info
-
-       El estilo visual depende de:
-
-           messageType
-
-       ====================================================== -->
+  <!-- =======================================================
+       MENSAJE DEL SISTEMA
+       ======================================================= -->
 
   <div
     *ngIf="message"
@@ -222,44 +108,13 @@ en:
     [class.error]="messageType === 'error'"
     [class.info]="messageType === 'info'"
     role="alert"
-    aria-live="polite"
   >
 
-
-    <!-- ==================================================
-         ICONO DE ÉXITO
-         ================================================== -->
-
-    <span
-      *ngIf="messageType === 'success'"
-      aria-hidden="true"
-    >
-
-      ✓
-
-    </span>
-
-
-    <!-- ==================================================
-         ICONO DE ERROR
-         ================================================== -->
+    <!-- =====================================================
+         ICONO
+         ===================================================== -->
 
     <span
-      *ngIf="messageType === 'error'"
-      aria-hidden="true"
-    >
-
-      ✕
-
-    </span>
-
-
-    <!-- ==================================================
-         ICONO DE INFORMACIÓN
-         ================================================== -->
-
-    <span
-      *ngIf="messageType === 'info'"
       aria-hidden="true"
     >
 
@@ -268,26 +123,22 @@ en:
     </span>
 
 
-    <!-- ==================================================
-         TEXTO DEL MENSAJE
-         ================================================== -->
+    <!-- =====================================================
+         TEXTO
+         ===================================================== -->
 
-    <span class="message-text">
+    <span
+      class="message-text"
+    >
 
       {{ message }}
 
     </span>
 
 
-    <!-- ==================================================
+    <!-- =====================================================
          CERRAR MENSAJE
-         ==================================================
-
-         Ejecuta:
-
-             clearMessage()
-
-         ================================================== -->
+         ===================================================== -->
 
     <button
       type="button"
@@ -303,26 +154,9 @@ en:
   </div>
 
 
-  <!-- ======================================================
-       FORMULARIO DE PRODUCTO
-       ======================================================
-
-       Se muestra cuando:
-
-           showForm === true
-
-       El mismo formulario se utiliza para:
-
-           1. Crear productos.
-           2. Editar productos.
-
-       La variable:
-
-           editingProductId
-
-       determina qué operación se realizará.
-
-       ====================================================== -->
+  <!-- =======================================================
+       FORMULARIO
+       ======================================================= -->
 
   <section
     *ngIf="showForm"
@@ -330,22 +164,9 @@ en:
     aria-labelledby="product-form-title"
   >
 
-
-    <!-- ====================================================
-         TÍTULO DINÁMICO
-         ====================================================
-
-         CREACIÓN:
-
-             Nuevo producto
-
-         EDICIÓN:
-
-             Editar producto
-
-         ==================================================== -->
-
-    <h2 id="product-form-title">
+    <h2
+      id="product-form-title"
+    >
 
       {{
         editingProductId === null
@@ -361,20 +182,9 @@ en:
     </p>
 
 
-    <!-- ====================================================
+    <!-- =====================================================
          FORMULARIO ANGULAR
-         ====================================================
-
-         ngSubmit:
-
-             saveProduct()
-
-         #productForm:
-
-             Referencia al formulario administrado por
-             Angular Forms.
-
-         ==================================================== -->
+         ===================================================== -->
 
     <form
       (ngSubmit)="saveProduct()"
@@ -383,31 +193,20 @@ en:
     >
 
 
-      <!-- ==================================================
-           NOMBRE DEL PRODUCTO
-           ================================================== -->
+      <!-- ===================================================
+           NOMBRE
+           =================================================== -->
 
       <div class="form-group">
 
-        <label for="product-name">
+        <label
+          for="product-name"
+        >
+
           Nombre
+
         </label>
 
-
-        <!-- =================================================
-             CAMPO NOMBRE
-             =================================================
-
-             [(ngModel)] mantiene sincronizado:
-
-                 newProduct.name
-
-             Validaciones:
-
-                 required
-                 maxlength="100"
-
-             ================================================= -->
 
         <input
           id="product-name"
@@ -419,12 +218,8 @@ en:
           autocomplete="off"
           placeholder="Nombre del producto"
           #name="ngModel"
-        >
+        />
 
-
-        <!-- =================================================
-             ERROR DEL NOMBRE
-             ================================================= -->
 
         <small
           class="field-error"
@@ -438,26 +233,20 @@ en:
       </div>
 
 
-      <!-- ==================================================
-           MARCA DEL PRODUCTO
-           ================================================== -->
+      <!-- ===================================================
+           MARCA
+           =================================================== -->
 
       <div class="form-group">
 
-        <label for="product-brand">
+        <label
+          for="product-brand"
+        >
+
           Marca
+
         </label>
 
-
-        <!-- =================================================
-             CAMPO MARCA
-
-             Validaciones:
-
-                 required
-                 maxlength="100"
-
-             ================================================= -->
 
         <input
           id="product-brand"
@@ -469,12 +258,8 @@ en:
           autocomplete="off"
           placeholder="Marca del producto"
           #brand="ngModel"
-        >
+        />
 
-
-        <!-- =================================================
-             ERROR DE MARCA
-             ================================================= -->
 
         <small
           class="field-error"
@@ -488,28 +273,20 @@ en:
       </div>
 
 
-      <!-- ==================================================
-           PRECIO DEL PRODUCTO
-           ================================================== -->
+      <!-- ===================================================
+           PRECIO
+           =================================================== -->
 
       <div class="form-group">
 
-        <label for="product-price">
+        <label
+          for="product-price"
+        >
+
           Precio
+
         </label>
 
-
-        <!-- =================================================
-             CAMPO PRECIO
-
-             Validaciones:
-
-                 required
-                 min="0"
-                 max="999.99"
-                 step="0.01"
-
-             ================================================= -->
 
         <input
           id="product-price"
@@ -523,12 +300,8 @@ en:
           inputmode="decimal"
           placeholder="0.00"
           #price="ngModel"
-        >
+        />
 
-
-        <!-- =================================================
-             PRECIO OBLIGATORIO
-             ================================================= -->
 
         <small
           class="field-error"
@@ -543,10 +316,6 @@ en:
         </small>
 
 
-        <!-- =================================================
-             PRECIO NEGATIVO
-             ================================================= -->
-
         <small
           class="field-error"
           *ngIf="
@@ -560,10 +329,6 @@ en:
         </small>
 
 
-        <!-- =================================================
-             PRECIO SUPERIOR AL MÁXIMO
-             ================================================= -->
-
         <small
           class="field-error"
           *ngIf="
@@ -576,10 +341,6 @@ en:
 
         </small>
 
-
-        <!-- =================================================
-             PRECIO INVÁLIDO
-             ================================================= -->
 
         <small
           class="field-error"
@@ -599,38 +360,23 @@ en:
       </div>
 
 
-      <!-- ==================================================
-           CÓDIGO DEL PRODUCTO
-           ==================================================
-
-           El código es generado automáticamente por Laravel.
-
-           Por seguridad y consistencia del sistema:
-
-           - No se captura manualmente.
-           - No se modifica desde Angular.
-           - Se muestra únicamente cuando el producto
-             ya existe.
-
-           ================================================== -->
+      <!-- ===================================================
+           CÓDIGO
+           =================================================== -->
 
       <div class="form-group">
 
-        <label for="product-code">
+        <label
+          for="product-code"
+        >
+
           Código
+
         </label>
 
 
         <!-- =================================================
              CREACIÓN
-             =================================================
-
-             Cuando:
-
-                 editingProductId === null
-
-             todavía no existe un código.
-
              ================================================= -->
 
         <ng-container
@@ -640,7 +386,9 @@ en:
           "
         >
 
-          <p class="generated-code-message">
+          <p
+            class="generated-code-message"
+          >
 
             El código del producto será generado
             automáticamente por el sistema al guardar.
@@ -652,14 +400,11 @@ en:
 
         <!-- =================================================
              EDICIÓN
-             =================================================
-
-             Cuando el producto ya existe, mostramos
-             su código actual.
-
              ================================================= -->
 
-        <ng-template #editingCode>
+        <ng-template
+          #editingCode
+        >
 
           <div
             id="product-code"
@@ -671,7 +416,9 @@ en:
           </div>
 
 
-          <p class="generated-code-message">
+          <p
+            class="generated-code-message"
+          >
 
             El código es generado automáticamente
             y no puede modificarse.
@@ -683,25 +430,12 @@ en:
       </div>
 
 
-      <!-- ==================================================
+      <!-- ===================================================
            ACCIONES DEL FORMULARIO
-           ================================================== -->
+           =================================================== -->
 
       <div class="actions">
 
-
-        <!-- =================================================
-             GUARDAR PRODUCTO
-             =================================================
-
-             El botón se deshabilita mientras el formulario
-             tenga errores de validación.
-
-             Al enviarse ejecuta:
-
-                 saveProduct()
-
-             ================================================= -->
 
         <button
           type="submit"
@@ -717,16 +451,6 @@ en:
 
         </button>
 
-
-        <!-- =================================================
-             CANCELAR
-             =================================================
-
-             Ejecuta:
-
-                 cancelCreate()
-
-             ================================================= -->
 
         <button
           type="button"
@@ -745,9 +469,9 @@ en:
   </section>
 
 
-  <!-- ======================================================
+  <!-- =======================================================
        LISTA DE PRODUCTOS
-       ====================================================== -->
+       ======================================================= -->
 
   <section
     class="products-card"
@@ -755,20 +479,26 @@ en:
   >
 
 
-    <!-- ====================================================
-         ENCABEZADO DE LA LISTA
-         ==================================================== -->
+    <!-- =====================================================
+         ENCABEZADO
+         ===================================================== -->
 
     <div class="list-header">
 
       <div>
 
-        <h2 id="products-list-title">
+        <h2
+          id="products-list-title"
+        >
+
           Lista de productos
+
         </h2>
 
         <p>
+
           Productos registrados actualmente en el sistema.
+
         </p>
 
       </div>
@@ -776,23 +506,18 @@ en:
     </div>
 
 
-    <!-- ====================================================
-         TABLA RESPONSIVE
-         ====================================================
-
-         table-responsive permite desplazamiento horizontal
-         cuando el ancho disponible no es suficiente.
-
-         ==================================================== -->
+    <!-- =====================================================
+         TABLA
+         ===================================================== -->
 
     <div class="table-responsive">
 
       <table>
 
 
-        <!-- ==================================================
-             ENCABEZADO DE LA TABLA
-             ================================================== -->
+        <!-- =================================================
+             CABECERA
+             ================================================= -->
 
         <thead>
 
@@ -827,33 +552,20 @@ en:
         </thead>
 
 
-        <!-- ==================================================
-             CUERPO DE LA TABLA
-             ================================================== -->
+        <!-- =================================================
+             CUERPO
+             ================================================= -->
 
         <tbody>
 
 
-          <!-- =================================================
+          <!-- ===============================================
                PRODUCTOS
-               =================================================
-
-               *ngFor recorre:
-
-                   products
-
-               y genera una fila por producto.
-
-               ================================================= -->
+               =============================================== -->
 
           <tr
             *ngFor="let product of products"
           >
-
-
-            <!-- ===============================================
-                 CÓDIGO
-                 =============================================== -->
 
             <td
               data-label="Código"
@@ -864,10 +576,6 @@ en:
             </td>
 
 
-            <!-- ===============================================
-                 NOMBRE
-                 =============================================== -->
-
             <td
               data-label="Nombre"
             >
@@ -877,10 +585,6 @@ en:
             </td>
 
 
-            <!-- ===============================================
-                 MARCA
-                 =============================================== -->
-
             <td
               data-label="Marca"
             >
@@ -889,20 +593,6 @@ en:
 
             </td>
 
-
-            <!-- ===============================================
-                 PRECIO
-                 ===============================================
-
-                 number:'1.2-2'
-
-                 Significa:
-
-                 - mínimo 1 dígito entero.
-                 - mínimo 2 decimales.
-                 - máximo 2 decimales.
-
-                 =============================================== -->
 
             <td
               data-label="Precio"
@@ -915,16 +605,6 @@ en:
 
             </td>
 
-
-            <!-- ===============================================
-                 FECHA DE CREACIÓN
-                 ===============================================
-
-                 Formato:
-
-                     dd/MM/yyyy HH:mm
-
-                 =============================================== -->
 
             <td
               data-label="Fecha de creación"
@@ -942,9 +622,9 @@ en:
             </td>
 
 
-            <!-- ===============================================
-                 ACCIONES DEL PRODUCTO
-                 =============================================== -->
+            <!-- =============================================
+                 ACCIONES
+                 ============================================= -->
 
             <td
               data-label="Acciones"
@@ -953,23 +633,17 @@ en:
               <div class="actions">
 
 
-                <!-- ===========================================
+                <!-- =========================================
                      VER
-                     ===========================================
-
-                     Ejecuta:
-
-                         viewProduct(product)
-
-                     Abre el modal de detalle.
-
-                     =========================================== -->
+                     ========================================= -->
 
                 <button
                   type="button"
                   class="btn-view"
                   (click)="viewProduct(product)"
-                  [attr.aria-label]="'Ver producto ' + product.name"
+                  [attr.aria-label]="
+                    'Ver producto ' + product.name
+                  "
                 >
 
                   Ver
@@ -977,23 +651,17 @@ en:
                 </button>
 
 
-                <!-- ===========================================
+                <!-- =========================================
                      EDITAR
-                     ===========================================
-
-                     Ejecuta:
-
-                         editProduct(product)
-
-                     Abre el formulario de edición.
-
-                     =========================================== -->
+                     ========================================= -->
 
                 <button
                   type="button"
                   class="btn-edit"
                   (click)="editProduct(product)"
-                  [attr.aria-label]="'Editar producto ' + product.name"
+                  [attr.aria-label]="
+                    'Editar producto ' + product.name
+                  "
                 >
 
                   Editar
@@ -1001,24 +669,17 @@ en:
                 </button>
 
 
-                <!-- ===========================================
+                <!-- =========================================
                      ELIMINAR
-                     ===========================================
-
-                     Ejecuta:
-
-                         deleteProduct(product)
-
-                     El componente solicitará confirmación
-                     antes de realizar la eliminación.
-
-                     =========================================== -->
+                     ========================================= -->
 
                 <button
                   type="button"
                   class="btn-delete"
                   (click)="deleteProduct(product)"
-                  [attr.aria-label]="'Eliminar producto ' + product.name"
+                  [attr.aria-label]="
+                    'Eliminar producto ' + product.name
+                  "
                 >
 
                   Eliminar
@@ -1032,18 +693,9 @@ en:
           </tr>
 
 
-          <!-- =================================================
+          <!-- ===============================================
                LISTA VACÍA
-               =================================================
-
-               Se muestra cuando no existen productos.
-
-               Nota:
-               El estado de carga se controla desde
-               products.component.ts si posteriormente
-               se incorpora una bandera isLoading.
-
-               ================================================= -->
+               =============================================== -->
 
           <tr
             *ngIf="products.length === 0"
@@ -1071,19 +723,9 @@ en:
 </main>
 
 
-<!-- ========================================================
-     MODAL DE DETALLE DEL PRODUCTO
-     ========================================================
-
-     El modal se muestra cuando:
-
-         showDetailModal === true
-
-     y existe:
-
-         selectedProduct
-
-     ======================================================== -->
+<!-- =========================================================
+     MODAL DE DETALLE
+     ========================================================= -->
 
 <div
   *ngIf="
@@ -1097,27 +739,31 @@ en:
 >
 
 
-  <!-- ======================================================
-       CONTENIDO DEL MODAL
-       ====================================================== -->
+  <!-- =======================================================
+       CONTENIDO
+       ======================================================= -->
 
-  <section class="detail-modal">
+  <section
+    class="detail-modal"
+  >
 
 
-    <!-- ====================================================
-         ENCABEZADO DEL MODAL
-         ==================================================== -->
+    <!-- =====================================================
+         ENCABEZADO
+         ===================================================== -->
 
-    <header class="detail-modal-header">
+    <header
+      class="detail-modal-header"
+    >
 
-      <h2 id="product-detail-title">
+      <h2
+        id="product-detail-title"
+      >
+
         Detalle del producto
+
       </h2>
 
-
-      <!-- =================================================
-           CERRAR MODAL
-           ================================================= -->
 
       <button
         type="button"
@@ -1133,16 +779,13 @@ en:
     </header>
 
 
-    <!-- ====================================================
-         INFORMACIÓN DEL PRODUCTO
-         ==================================================== -->
+    <!-- =====================================================
+         INFORMACIÓN
+         ===================================================== -->
 
-    <div class="detail-modal-body">
-
-
-      <!-- ==================================================
-           CÓDIGO
-           ================================================== -->
+    <div
+      class="detail-modal-body"
+    >
 
       <p>
 
@@ -1157,10 +800,6 @@ en:
       </p>
 
 
-      <!-- ==================================================
-           NOMBRE
-           ================================================== -->
-
       <p>
 
         <strong>
@@ -1173,10 +812,6 @@ en:
 
       </p>
 
-
-      <!-- ==================================================
-           MARCA
-           ================================================== -->
 
       <p>
 
@@ -1191,10 +826,6 @@ en:
       </p>
 
 
-      <!-- ==================================================
-           PRECIO
-           ================================================== -->
-
       <p>
 
         <strong>
@@ -1202,18 +833,16 @@ en:
         </strong>
 
         <span>
+
           MX${{
             selectedProduct.price
               | number:'1.2-2'
           }}
+
         </span>
 
       </p>
 
-
-      <!-- ==================================================
-           FECHA DE CREACIÓN
-           ================================================== -->
 
       <p>
 
@@ -1239,37 +868,28 @@ en:
     </div>
 
 
-    <!-- ====================================================
-         ACCIONES DEL MODAL
-         ==================================================== -->
+    <!-- =====================================================
+         ACCIONES
+         ===================================================== -->
 
-    <footer class="detail-modal-footer">
-
-
-      <!-- =================================================
-           EDITAR
-
-           Reutiliza:
-
-               editProduct(selectedProduct)
-
-           ================================================= -->
+    <footer
+      class="detail-modal-footer"
+    >
 
       <button
         type="button"
         class="btn-edit"
         (click)="editProduct(selectedProduct)"
-        [attr.aria-label]="'Editar producto ' + selectedProduct.name"
+        [attr.aria-label]="
+          'Editar producto ' +
+          selectedProduct.name
+        "
       >
 
         Editar
 
       </button>
 
-
-      <!-- =================================================
-           CERRAR
-           ================================================= -->
 
       <button
         type="button"

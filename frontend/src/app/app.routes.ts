@@ -1,105 +1,147 @@
 /**
  * ============================================================
- * CONFIGURACIÓN DE RUTAS DE LA APLICACIÓN
+ * TAP TERMINAL
+ * CONFIGURACIÓN DE RUTAS
  * ============================================================
  *
- * Este archivo contiene la configuración de navegación del
- * frontend Angular.
+ * Archivo:
+ * app.routes.ts
  *
- * RESPONSABILIDAD:
+ * Responsabilidad:
  *
- * Define las diferentes URL que podrá utilizar la aplicación
- * para mostrar sus diferentes vistas o componentes.
+ * Definir las rutas principales del frontend Angular.
  *
- * La navegación se mantiene separada de la lógica de negocio.
- * La comunicación con la API de Laravel será responsabilidad
- * de los servicios correspondientes, como ProductService.
+ * Rutas:
  *
- * ARQUITECTURA:
+ * /login
+ * /products
  *
- * app.config.ts
- *      ↓
- * proporciona el Router
+ * También se define:
+ *
+ * - Redirección de la ruta raíz.
+ * - Redirección de rutas desconocidas.
+ * - Protección de /products mediante AuthGuard.
+ *
+ * Arquitectura:
+ *
+ * Angular Router
  *      ↓
  * app.routes.ts
  *      ↓
- * define las rutas
+ * AuthGuard
  *      ↓
- * Router
- *      ↓
- * RouterOutlet
- *      ↓
- * muestra el componente correspondiente
- */
-
-/*
- * ============================================================
- * IMPORTACIONES
- * ============================================================
+ * Component
  *
- * Routes:
- *
- * Es el tipo proporcionado por Angular Router que representa
- * una colección de configuraciones de rutas.
+ * ============================================================
  */
 
 import { Routes } from '@angular/router';
 
-
-/*
- * ============================================================
- * IMPORTACIÓN DEL COMPONENTE DE PRODUCTOS
- * ============================================================
- *
- * ProductsComponent representa la pantalla de productos.
- *
- * Se utilizará cuando el usuario visite:
- *
- * /products
- *
- * La ruta solamente controla la navegación.
- * La comunicación con Laravel seguirá siendo responsabilidad
- * de ProductService.
- */
+import { LoginComponent } from './pages/login/login.component';
 
 import { ProductsComponent } from './pages/products/products.component';
 
+import { authGuard } from './guards/auth.guard';
 
-/*
+
+/**
  * ============================================================
- * COLECCIÓN PRINCIPAL DE RUTAS
+ * RUTAS DE LA APLICACIÓN
  * ============================================================
- *
- * Aquí se registran las rutas disponibles en la aplicación.
  */
 
 export const routes: Routes = [
 
-  /*
+  /**
    * ==========================================================
-   * RUTA DE PRODUCTOS
+   * LOGIN
    * ==========================================================
    *
-   * path:
-   * Define la URL que utilizará el usuario.
+   * URL:
    *
-   * component:
-   * Define el componente que Angular debe mostrar.
+   * /login
    *
-   * Flujo:
+   * Esta ruta es pública.
+   *
+   * No utiliza AuthGuard porque el usuario necesita
+   * poder acceder al formulario de inicio de sesión
+   * sin estar autenticado.
+   */
+
+  {
+    path: 'login',
+    component: LoginComponent
+  },
+
+
+  /**
+   * ==========================================================
+   * PRODUCTOS
+   * ==========================================================
+   *
+   * URL:
    *
    * /products
-   *      ↓
-   * Angular Router
-   *      ↓
+   *
+   * Esta ruta requiere autenticación.
+   *
+   * Antes de mostrar ProductsComponent, Angular ejecuta:
+   *
+   * authGuard
+   *
+   * Si existe un token:
+   *
+   * AuthGuard
+   *     ↓
+   * true
+   *     ↓
    * ProductsComponent
-   *      ↓
-   * router-outlet
+   *
+   * Si no existe un token:
+   *
+   * AuthGuard
+   *     ↓
+   * /login
    */
 
   {
     path: 'products',
-    component: ProductsComponent
+    component: ProductsComponent,
+    canActivate: [authGuard]
+  },
+
+
+  /**
+   * ==========================================================
+   * RUTA RAÍZ
+   * ==========================================================
+   *
+   * URL:
+   *
+   * /
+   *
+   * Redirige al usuario hacia /login.
+   */
+
+  {
+    path: '',
+    pathMatch: 'full',
+    redirectTo: 'login'
+  },
+
+
+  /**
+   * ==========================================================
+   * RUTAS DESCONOCIDAS
+   * ==========================================================
+   *
+   * Si el usuario escribe una URL que no existe,
+   * Angular lo devuelve al login.
+   */
+
+  {
+    path: '**',
+    redirectTo: 'login'
   }
 
 ];
