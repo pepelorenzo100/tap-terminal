@@ -623,7 +623,7 @@ export class UsersComponent implements OnInit {
 
                     if (
                       String(
-                        user._id ?? ''
+                        user.id ?? ''
                       ) === userId
                     ) {
 
@@ -688,7 +688,7 @@ export class UsersComponent implements OnInit {
 
 
     if (
-      !user._id
+      !user.id
     ) {
 
       this.showMessage(
@@ -703,7 +703,7 @@ export class UsersComponent implements OnInit {
 
     this.editingUserId =
       String(
-        user._id
+        user.id
       );
 
 
@@ -823,7 +823,7 @@ export class UsersComponent implements OnInit {
   ): void {
 
     if (
-      !user._id
+      !user.id
     ) {
 
       this.showMessage(
@@ -853,7 +853,7 @@ export class UsersComponent implements OnInit {
 
     const userId =
       String(
-        user._id
+        user.id
       );
 
 
@@ -870,7 +870,7 @@ export class UsersComponent implements OnInit {
                 (item: User) => {
 
                   return String(
-                    item._id ?? ''
+                    item.id ?? ''
                   ) !== userId;
 
                 }
@@ -881,7 +881,7 @@ export class UsersComponent implements OnInit {
             if (
               this.selectedUser &&
               String(
-                this.selectedUser._id ?? ''
+                this.selectedUser.id ?? ''
               ) === userId
             ) {
 
