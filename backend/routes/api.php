@@ -13,7 +13,7 @@
 | - Products
 | - Users
 |
-| Flujo:
+| Flujo general:
 |
 | Angular
 |    ↓
@@ -21,11 +21,31 @@
 |    ↓
 | Laravel API
 |    ↓
+| Middleware
+|    ↓
 | Controller
 |    ↓
 | Model
 |    ↓
 | MongoDB
+|
+|--------------------------------------------------------------------------
+|
+| AUTENTICACIÓN
+|
+| El endpoint /login es público porque permite obtener
+| el token de autenticación.
+|
+| Las rutas protegidas utilizan:
+|
+|     auth:sanctum
+|
+| El cliente Angular envía:
+|
+|     Authorization: Bearer TOKEN
+|
+| Laravel Sanctum valida el token antes de permitir
+| el acceso al controlador.
 |
 |--------------------------------------------------------------------------
 */
@@ -35,36 +55,28 @@ use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| AUTHENTICATION API
-|--------------------------------------------------------------------------
-|
-| Estas rutas permiten iniciar y cerrar sesión.
-|
-| POST /api/login
-| POST /api/logout
-| GET  /api/me
-|
-| /login es público.
-|
-| /logout y /me requieren autenticación mediante Sanctum.
-|
-|--------------------------------------------------------------------------
-*/
 
 /*
 |--------------------------------------------------------------------------
 | LOGIN
 |--------------------------------------------------------------------------
 |
+| Endpoint:
+|
+|     POST /api/login
+|
+| Esta ruta es pública.
+|
 | El usuario proporciona:
 |
-| email
-| password
+|     email
+|     password
+|     device_name (opcional)
 |
-| El endpoint devuelve un token Bearer.
+| Si las credenciales son correctas, AuthController genera
+| un token mediante Laravel Sanctum.
 |
+|--------------------------------------------------------------------------
 */
 
 Route::post(
@@ -72,20 +84,59 @@ Route::post(
     [AuthController::class, 'login']
 );
 
+
 /*
 |--------------------------------------------------------------------------
-| AUTHENTICATED ROUTES
+| RUTAS PROTEGIDAS
 |--------------------------------------------------------------------------
 |
-| Las siguientes rutas requieren un usuario autenticado.
+| Todas las rutas definidas dentro de este grupo requieren
+| autenticación mediante Laravel Sanctum.
 |
+| Middleware:
+|
+|     auth:sanctum
+|
+| Flujo:
+|
+| Angular
+|    ↓
+| AuthInterceptor
+|    ↓
+| Authorization: Bearer TOKEN
+|    ↓
+| Laravel
+|    ↓
+| auth:sanctum
+|    ↓
+| Controller
+|
+| Si el token es válido:
+|
+|     acceso permitido
+|
+| Si el token es inválido, inexistente o revocado:
+|
+|     HTTP 401 Unauthorized
+|
+|--------------------------------------------------------------------------
 */
 
 Route::middleware('auth:sanctum')->group(function () {
+
+
     /*
     |--------------------------------------------------------------------------
     | USUARIO AUTENTICADO
     |--------------------------------------------------------------------------
+    |
+    | Endpoint:
+    |
+    |     GET /api/me
+    |
+    | Permite obtener la información del usuario
+    | correspondiente al token autenticado.
+    |
     */
 
     Route::get(
@@ -93,72 +144,110 @@ Route::middleware('auth:sanctum')->group(function () {
         [AuthController::class, 'me']
     );
 
+
     /*
     |--------------------------------------------------------------------------
     | LOGOUT
     |--------------------------------------------------------------------------
+    |
+    | Endpoint:
+    |
+    |     POST /api/logout
+    |
+    | Requiere autenticación.
+    |
+    | AuthController elimina el token utilizado
+    | en la petición actual.
+    |
     */
 
     Route::post(
         'logout',
         [AuthController::class, 'logout']
     );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | PRODUCT API
+    |--------------------------------------------------------------------------
+    |
+    | CRUD completo de productos.
+    |
+    | Todos estos endpoints requieren autenticación.
+    |
+    | GET:
+    |
+    |     /api/products
+    |
+    | POST:
+    |
+    |     /api/products
+    |
+    | GET:
+    |
+    |     /api/products/{product}
+    |
+    | PUT:
+    |
+    |     /api/products/{product}
+    |
+    | PATCH:
+    |
+    |     /api/products/{product}
+    |
+    | DELETE:
+    |
+    |     /api/products/{product}
+    |
+    |--------------------------------------------------------------------------
+    */
+
+    Route::apiResource(
+        'products',
+        ProductController::class
+    );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | USER API
+    |--------------------------------------------------------------------------
+    |
+    | CRUD completo de usuarios.
+    |
+    | Todos estos endpoints requieren autenticación.
+    |
+    | GET:
+    |
+    |     /api/users
+    |
+    | POST:
+    |
+    |     /api/users
+    |
+    | GET:
+    |
+    |     /api/users/{user}
+    |
+    | PUT:
+    |
+    |     /api/users/{user}
+    |
+    | PATCH:
+    |
+    |     /api/users/{user}
+    |
+    | DELETE:
+    |
+    |     /api/users/{user}
+    |
+    |--------------------------------------------------------------------------
+    */
+
+    Route::apiResource(
+        'users',
+        UserController::class
+    );
+
 });
-
-/*
-|--------------------------------------------------------------------------
-| PRODUCT API
-|--------------------------------------------------------------------------
-|
-| CRUD completo de productos.
-|
-| GET       /api/products
-| POST      /api/products
-| GET       /api/products/{product}
-| PUT       /api/products/{product}
-| PATCH     /api/products/{product}
-| DELETE    /api/products/{product}
-|
-| IMPORTANTE:
-|
-| El CRUD de productos permanece sin autenticación por ahora.
-|
-| Posteriormente decidiremos qué operaciones requieren
-| autenticación y permisos.
-|
-|--------------------------------------------------------------------------
-*/
-
-Route::apiResource(
-    'products',
-    ProductController::class
-);
-
-/*
-|--------------------------------------------------------------------------
-| USER API
-|--------------------------------------------------------------------------
-|
-| CRUD completo de usuarios.
-|
-| GET       /api/users
-| POST      /api/users
-| GET       /api/users/{user}
-| PUT       /api/users/{user}
-| PATCH     /api/users/{user}
-| DELETE    /api/users/{user}
-|
-| IMPORTANTE:
-|
-| El CRUD de usuarios permanece sin autenticación por ahora.
-|
-| No modificamos esta parte hasta terminar y probar
-| correctamente el sistema de autenticación.
-|
-|--------------------------------------------------------------------------
-*/
-
-Route::apiResource(
-    'users',
-    UserController::class
-);
