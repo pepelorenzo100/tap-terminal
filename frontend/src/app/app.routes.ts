@@ -5,41 +5,57 @@
  * ============================================================
  *
  * Archivo:
- * app.routes.ts
+ *
+ *     frontend/src/app/app.routes.ts
  *
  * Responsabilidad:
  *
- * Definir las rutas principales del frontend Angular.
+ * Definir las rutas principales de la aplicación Angular.
  *
- * Rutas:
+ * Módulos actuales:
  *
- * /login
- * /products
+ *     /login
+ *     /products
+ *     /users
  *
- * También se define:
+ * Seguridad:
  *
- * - Redirección de la ruta raíz.
- * - Redirección de rutas desconocidas.
- * - Protección de /products mediante AuthGuard.
+ * Las rutas administrativas utilizan AuthGuard.
  *
- * Arquitectura:
+ * Flujo:
  *
  * Angular Router
  *      ↓
- * app.routes.ts
- *      ↓
  * AuthGuard
  *      ↓
- * Component
+ * Token de autenticación
+ *      ↓
+ * Componente protegido
  *
  * ============================================================
  */
 
 import { Routes } from '@angular/router';
 
+
+/**
+ * ============================================================
+ * COMPONENTES
+ * ============================================================
+ */
+
 import { LoginComponent } from './pages/login/login.component';
 
 import { ProductsComponent } from './pages/products/products.component';
+
+import { UsersComponent } from './pages/users/users.component';
+
+
+/**
+ * ============================================================
+ * GUARD
+ * ============================================================
+ */
 
 import { authGuard } from './guards/auth.guard';
 
@@ -59,17 +75,18 @@ export const routes: Routes = [
    *
    * URL:
    *
-   * /login
+   *     /login
    *
    * Esta ruta es pública.
    *
-   * No utiliza AuthGuard porque el usuario necesita
-   * poder acceder al formulario de inicio de sesión
-   * sin estar autenticado.
+   * El usuario necesita acceder al login antes de
+   * disponer de un token de autenticación.
+   *
    */
 
   {
     path: 'login',
+
     component: LoginComponent
   },
 
@@ -81,33 +98,58 @@ export const routes: Routes = [
    *
    * URL:
    *
-   * /products
+   *     /products
    *
-   * Esta ruta requiere autenticación.
+   * Esta sección requiere autenticación.
    *
-   * Antes de mostrar ProductsComponent, Angular ejecuta:
+   * AuthGuard comprueba que exista una sesión válida
+   * antes de permitir el acceso.
    *
-   * authGuard
-   *
-   * Si existe un token:
-   *
-   * AuthGuard
-   *     ↓
-   * true
-   *     ↓
-   * ProductsComponent
-   *
-   * Si no existe un token:
-   *
-   * AuthGuard
-   *     ↓
-   * /login
    */
 
   {
     path: 'products',
+
     component: ProductsComponent,
-    canActivate: [authGuard]
+
+    canActivate: [
+      authGuard
+    ]
+  },
+
+
+  /**
+   * ==========================================================
+   * USUARIOS
+   * ==========================================================
+   *
+   * URL:
+   *
+   *     /users
+   *
+   * Esta sección requiere autenticación.
+   *
+   * Los usuarios del sistema son información administrativa,
+   * por lo que no debe estar disponible públicamente.
+   *
+   * Flujo:
+   *
+   *     /users
+   *        ↓
+   *     authGuard
+   *        ↓
+   *     UsersComponent
+   *
+   */
+
+  {
+    path: 'users',
+
+    component: UsersComponent,
+
+    canActivate: [
+      authGuard
+    ]
   },
 
 
@@ -118,14 +160,17 @@ export const routes: Routes = [
    *
    * URL:
    *
-   * /
+   *     /
    *
-   * Redirige al usuario hacia /login.
+   * Por defecto enviamos al usuario al login.
+   *
    */
 
   {
     path: '',
+
     pathMatch: 'full',
+
     redirectTo: 'login'
   },
 
@@ -135,12 +180,13 @@ export const routes: Routes = [
    * RUTAS DESCONOCIDAS
    * ==========================================================
    *
-   * Si el usuario escribe una URL que no existe,
-   * Angular lo devuelve al login.
+   * Cualquier URL que no exista será redirigida al login.
+   *
    */
 
   {
     path: '**',
+
     redirectTo: 'login'
   }
 

@@ -1,0 +1,602 @@
+<main class="users-container">
+
+  <header class="users-header">
+
+    <div>
+      <h1>Usuarios</h1>
+
+      <p>
+        Administración de usuarios del sistema TAP Terminal.
+      </p>
+    </div>
+
+    <div class="header-actions">
+
+      <button
+        type="button"
+        class="btn-primary"
+        (click)="showCreateForm()"
+      >
+        Nuevo usuario
+      </button>
+
+      <button
+        type="button"
+        class="btn-excel"
+        (click)="exportToExcel()"
+      >
+        Exportar Excel
+      </button>
+
+      <button
+        type="button"
+        class="btn-pdf"
+        (click)="exportToPDF()"
+      >
+        Exportar PDF
+      </button>
+
+      <button
+        type="button"
+        class="btn-logout"
+        (click)="logout()"
+      >
+        Cerrar sesión
+      </button>
+
+    </div>
+
+  </header>
+
+
+  <div
+    *ngIf="message"
+    class="system-message"
+    [class.success]="messageType === 'success'"
+    [class.error]="messageType === 'error'"
+    [class.info]="messageType === 'info'"
+    role="alert"
+  >
+
+    <span class="message-text">
+      {{ message }}
+    </span>
+
+    <button
+      type="button"
+      class="message-close"
+      (click)="clearMessage()"
+      aria-label="Cerrar mensaje"
+    >
+      ×
+    </button>
+
+  </div>
+
+
+  <!-- =======================================================
+       FORMULARIO
+       ======================================================= -->
+
+  <section
+    *ngIf="showForm"
+    class="users-card user-form-card"
+  >
+
+    <h2>
+      {{
+        editingUserId === null
+          ? 'Nuevo usuario'
+          : 'Editar usuario'
+      }}
+    </h2>
+
+    <p>
+      Registra o actualiza la información del usuario.
+    </p>
+
+
+    <form
+      (ngSubmit)="saveUser()"
+      #userForm="ngForm"
+      novalidate
+    >
+
+      <div class="form-group">
+
+        <label for="user-name">
+          Nombre
+        </label>
+
+        <input
+          id="user-name"
+          type="text"
+          name="name"
+          [(ngModel)]="form.name"
+          required
+          maxlength="255"
+          autocomplete="name"
+          placeholder="Nombre completo"
+          #name="ngModel"
+        />
+
+        <small
+          class="field-error"
+          *ngIf="name.invalid && name.touched"
+        >
+          El nombre es obligatorio.
+        </small>
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="user-email">
+          Usuario / correo electrónico
+        </label>
+
+        <input
+          id="user-email"
+          type="email"
+          name="email"
+          [(ngModel)]="form.email"
+          required
+          maxlength="255"
+          autocomplete="email"
+          placeholder="usuario@ejemplo.com"
+          #email="ngModel"
+        />
+
+        <small
+          class="field-error"
+          *ngIf="email.invalid && email.touched"
+        >
+          Introduce un correo electrónico válido.
+        </small>
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="user-phone">
+          Número de teléfono
+        </label>
+
+        <input
+          id="user-phone"
+          type="tel"
+          name="phone"
+          [(ngModel)]="form.phone"
+          placeholder="+523141234567"
+          autocomplete="tel"
+        />
+
+        <small class="field-help">
+          Incluye el código de país. Ejemplo: +523141234567
+        </small>
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="user-password">
+          Contraseña
+        </label>
+
+        <input
+          id="user-password"
+          type="password"
+          name="password"
+          [(ngModel)]="form.password"
+          [required]="editingUserId === null"
+          minlength="8"
+          autocomplete="new-password"
+          placeholder="Mínimo 8 caracteres"
+          #password="ngModel"
+        />
+
+        <small
+          class="field-error"
+          *ngIf="
+            password.invalid &&
+            password.touched &&
+            password.errors?.['required']
+          "
+        >
+          La contraseña es obligatoria.
+        </small>
+
+        <small
+          class="field-error"
+          *ngIf="
+            password.invalid &&
+            password.touched &&
+            password.errors?.['minlength']
+          "
+        >
+          La contraseña debe tener al menos 8 caracteres.
+        </small>
+
+        <small
+          class="field-help"
+          *ngIf="editingUserId !== null"
+        >
+          Déjala vacía para conservar la contraseña actual.
+        </small>
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="user-photo">
+          Foto de perfil
+        </label>
+
+        <input
+          id="user-photo"
+          type="file"
+          accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+          (change)="onFileSelected($event)"
+        />
+
+        <small
+          class="field-help"
+          *ngIf="selectedFileName"
+        >
+          Archivo seleccionado:
+          {{ selectedFileName }}
+        </small>
+
+        <small class="field-help">
+          Formatos permitidos: JPG, PNG o WEBP. Máximo 2 MB.
+        </small>
+
+        <small
+          class="field-error"
+          *ngIf="
+            editingUserId === null &&
+            !selectedFile
+          "
+        >
+          La foto de perfil es obligatoria al crear un usuario.
+        </small>
+
+      </div>
+
+
+      <div class="actions">
+
+        <button
+          type="submit"
+          class="btn-primary"
+          [disabled]="userForm.invalid || saving"
+        >
+          {{
+            saving
+              ? 'Guardando...'
+              : (
+                  editingUserId === null
+                    ? 'Guardar usuario'
+                    : 'Guardar cambios'
+                )
+          }}
+        </button>
+
+        <button
+          type="button"
+          class="btn-secondary"
+          (click)="cancelForm()"
+          [disabled]="saving"
+        >
+          Cancelar
+        </button>
+
+      </div>
+
+    </form>
+
+  </section>
+
+
+  <!-- =======================================================
+       LISTADO
+       ======================================================= -->
+
+  <section class="users-card">
+
+    <div class="list-header">
+
+      <div>
+
+        <h2>
+          Lista de usuarios
+        </h2>
+
+        <p>
+          Usuarios registrados actualmente en el sistema.
+        </p>
+
+      </div>
+
+    </div>
+
+
+    <div class="table-responsive">
+
+      <table>
+
+        <thead>
+
+          <tr>
+
+            <th>Código</th>
+
+            <th>Usuario</th>
+
+            <th>Nombre</th>
+
+            <th>Fecha de creación</th>
+
+            <th>Acciones</th>
+
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+          <tr
+            *ngFor="let user of users"
+          >
+
+            <td data-label="Código">
+              {{ user.code }}
+            </td>
+
+            <td data-label="Usuario">
+              {{ user.email }}
+            </td>
+
+            <td data-label="Nombre">
+              {{ user.name }}
+            </td>
+
+            <td data-label="Fecha de creación">
+
+              {{
+                user.created_at
+                  ? (
+                      user.created_at
+                      | date:'dd/MM/yyyy HH:mm'
+                    )
+                  : '—'
+              }}
+
+            </td>
+
+            <td data-label="Acciones">
+
+              <div class="actions">
+
+                <button
+                  type="button"
+                  class="btn-view"
+                  (click)="viewUser(user)"
+                >
+                  Detalle
+                </button>
+
+                <button
+                  type="button"
+                  class="btn-edit"
+                  (click)="editUser(user)"
+                >
+                  Editar
+                </button>
+
+                <button
+                  type="button"
+                  class="btn-delete"
+                  (click)="deleteUser(user)"
+                >
+                  Eliminar
+                </button>
+
+              </div>
+
+            </td>
+
+          </tr>
+
+
+          <tr *ngIf="users.length === 0">
+
+            <td
+              colspan="5"
+              class="empty-state"
+            >
+              No existen usuarios registrados.
+            </td>
+
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </section>
+
+</main>
+
+
+<!-- =========================================================
+     MODAL DE DETALLE
+     ========================================================= -->
+
+<div
+  *ngIf="showDetailModal && selectedUser"
+  class="detail-modal-backdrop"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="user-detail-title"
+>
+
+  <section class="detail-modal">
+
+    <header class="detail-modal-header">
+
+      <h2 id="user-detail-title">
+        Detalle del usuario
+      </h2>
+
+      <button
+        type="button"
+        class="modal-close"
+        (click)="closeDetailModal()"
+        aria-label="Cerrar detalle"
+      >
+        ×
+      </button>
+
+    </header>
+
+
+    <div class="detail-modal-body">
+
+      <p>
+
+        <strong>
+          Código:
+        </strong>
+
+        <span>
+          {{ selectedUser.code }}
+        </span>
+
+      </p>
+
+
+      <p>
+
+        <strong>
+          Usuario:
+        </strong>
+
+        <span>
+          {{ selectedUser.email }}
+        </span>
+
+      </p>
+
+
+      <p>
+
+        <strong>
+          Nombre:
+        </strong>
+
+        <span>
+          {{ selectedUser.name }}
+        </span>
+
+      </p>
+
+
+      <p>
+
+        <strong>
+          Número de teléfono:
+        </strong>
+
+        <span>
+          {{ selectedUser.phone || '—' }}
+        </span>
+
+      </p>
+
+
+      <p>
+
+        <strong>
+          Fecha de creación:
+        </strong>
+
+        <span>
+
+          {{
+            selectedUser.created_at
+              ? (
+                  selectedUser.created_at
+                  | date:'dd/MM/yyyy HH:mm'
+                )
+              : '—'
+          }}
+
+        </span>
+
+      </p>
+
+
+      <div class="profile-photo-section">
+
+        <strong>
+          Foto de perfil
+        </strong>
+
+        <div
+          *ngIf="selectedUser.profile_photo"
+          class="profile-photo-wrapper"
+        >
+
+          <img
+            [src]="
+              'http://127.0.0.1:8000/storage/' +
+              selectedUser.profile_photo
+            "
+            alt="Foto de perfil del usuario"
+            class="profile-photo"
+          />
+
+        </div>
+
+        <span
+          *ngIf="!selectedUser.profile_photo"
+          class="no-photo"
+        >
+          Sin fotografía registrada.
+        </span>
+
+      </div>
+
+    </div>
+
+
+    <footer class="detail-modal-footer">
+
+      <button
+        type="button"
+        class="btn-edit"
+        (click)="editUser(selectedUser)"
+      >
+        Editar
+      </button>
+
+      <button
+        type="button"
+        class="btn-secondary"
+        (click)="closeDetailModal()"
+      >
+        Cerrar
+      </button>
+
+    </footer>
+
+  </section>
+
+</div>
