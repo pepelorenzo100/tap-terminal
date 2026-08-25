@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{base_url}}/api/products/{{product_id}}"
+method: PUT
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "name": "Producto actualizado",
+      "brand": "TAP",
+      "price": 350
+    }
+order: 4000

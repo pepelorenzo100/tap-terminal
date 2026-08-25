@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{base_url}}/api/sections/{{section_id}}"
+method: GET
+headers:
+  Accept: application/json
+order: 3000

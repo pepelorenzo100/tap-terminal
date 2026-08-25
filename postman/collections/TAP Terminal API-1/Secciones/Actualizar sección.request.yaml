@@ -1,0 +1,16 @@
+$kind: http-request
+url: "{{base_url}}/api/sections/{{section_id}}"
+method: PUT
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "code": "SEC-REPORTS",
+      "name": "Reportes actualizados",
+      "description": "Descripción actualizada",
+      "route": "/reports"
+    }
+order: 4000

@@ -1,0 +1,7 @@
+$kind: http-request
+description: Solo lectura. Los registros se generan automáticamente mediante el trait Auditable en los modelos Product, User, AccessProfile.
+url: "{{base_url}}/api/audit-logs"
+method: GET
+headers:
+  Accept: application/json
+order: 1000

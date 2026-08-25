@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{base_url}}/api/access-profiles/{{access_profile_id}}"
+method: PUT
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "name": "Perfil actualizado",
+      "description": "Descripción actualizada",
+      "section_ids": ["{{section_id}}"]
+    }
+order: 4000

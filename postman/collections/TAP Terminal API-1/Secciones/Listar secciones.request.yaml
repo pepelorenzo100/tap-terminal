@@ -1,0 +1,20 @@
+$kind: http-request
+description: Guarda automáticamente el primer id de sección en {{section_id}}, útil para crear perfiles de prueba.
+url: "{{base_url}}/api/sections"
+method: GET
+headers:
+  Accept: application/json
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 200) {
+          const body = pm.response.json();
+          const list = body.data || body;
+          if (Array.isArray(list) && list.length > 0) {
+              const first = list[0];
+              const id = first.id || first._id;
+              if (id) { pm.collectionVariables.set('section_id', id); }
+          }
+      }
+    language: text/javascript
+order: 1000

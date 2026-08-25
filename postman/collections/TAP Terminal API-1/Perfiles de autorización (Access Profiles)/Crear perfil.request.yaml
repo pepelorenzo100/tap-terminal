@@ -1,0 +1,25 @@
+$kind: http-request
+description: El código (PRF-...) se genera automáticamente. section_ids es opcional pero recomendado — corre primero 'Secciones > Listar secciones' para obtener un {{section_id}} real.
+url: "{{base_url}}/api/access-profiles"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "name": "Perfil de ejemplo",
+      "description": "Acceso a productos",
+      "section_ids": ["{{section_id}}"]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 201) {
+          const body = pm.response.json();
+          const id = body.data && body.data.id;
+          if (id) { pm.collectionVariables.set('access_profile_id', id); }
+      }
+    language: text/javascript
+order: 2000

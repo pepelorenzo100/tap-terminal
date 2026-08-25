@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{base_url}}/api/access-profiles/{{access_profile_id}}"
+method: DELETE
+headers:
+  Accept: application/json
+order: 5000

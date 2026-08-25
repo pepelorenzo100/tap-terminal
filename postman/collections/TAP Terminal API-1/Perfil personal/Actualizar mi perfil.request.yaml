@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{base_url}}/api/profile"
+method: PUT
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "phone": "+523141234567"
+    }
+order: 2000

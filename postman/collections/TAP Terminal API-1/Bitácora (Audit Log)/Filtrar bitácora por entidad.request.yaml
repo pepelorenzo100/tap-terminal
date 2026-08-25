@@ -1,0 +1,8 @@
+$kind: http-request
+url: "{{base_url}}/api/audit-logs?entity=products"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  entity: products
+order: 2000

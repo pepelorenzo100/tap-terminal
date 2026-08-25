@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{base_url}}/api/audit-logs?entity=users&from=2026-08-01&to=2026-08-25"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  entity: users
+  from: 2026-08-01
+  to: 2026-08-25
+order: 3000

@@ -1,0 +1,7 @@
+$kind: http-request
+description: Devuelve el usuario autenticado junto con sus perfiles de autorización y las secciones a las que tiene acceso.
+url: "{{base_url}}/api/me"
+method: GET
+headers:
+  Accept: application/json
+order: 2000

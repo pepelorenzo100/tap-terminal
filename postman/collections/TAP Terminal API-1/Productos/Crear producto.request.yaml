@@ -1,0 +1,25 @@
+$kind: http-request
+description: El código (PROD-...) y la fecha de creación se generan automáticamente. Guarda el id creado en {{product_id}}.
+url: "{{base_url}}/api/products"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "name": "Producto de ejemplo",
+      "brand": "TAP",
+      "price": 250
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 201) {
+          const body = pm.response.json();
+          const id = body.id || (body.data && body.data.id);
+          if (id) { pm.collectionVariables.set('product_id', id); }
+      }
+    language: text/javascript
+order: 2000

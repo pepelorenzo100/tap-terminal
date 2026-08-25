@@ -1,4 +1,23 @@
 $kind: collection
 name: TAP Terminal API
+description: |-
+  Colección completa de la API REST de TAP Terminal. Incluye autenticación, productos, usuarios, perfiles de autorización, secciones y bitácora (audit log).
+
+  Uso rápido:
+  1. Corre primero "Auth > Login" — guarda el token automáticamente en la variable de colección {{token}} mediante un script de test.
+  2. Todas las demás peticiones ya usan Bearer {{token}} automáticamente.
+  3. Cambia {{base_url}} si tu backend corre en otro puerto.
 variables:
+  base_url: http://127.0.0.1:8000
   token: ""
+  product_id: ""
+  user_id: ""
+  access_profile_id: ""
+  section_id: ""
+  reset_token: ""
+auth:
+  - id: 0ea56fb1-132d-41f2-a401-7918a177da6c
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{token}}"

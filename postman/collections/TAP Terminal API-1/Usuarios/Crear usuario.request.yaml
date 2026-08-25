@@ -1,0 +1,37 @@
+$kind: http-request
+description: multipart/form-data. profile_ids[] es obligatorio (al menos uno) — corre primero 'Perfiles > Crear perfil' para tener un {{access_profile_id}} válido, o pega uno existente. profile_photo requiere seleccionar un archivo manualmente en Postman.
+url: "{{base_url}}/api/users"
+method: POST
+headers:
+  Accept: application/json
+body:
+  type: formdata
+  content:
+    - type: text
+      key: name
+      value: Usuario de ejemplo
+    - type: text
+      key: email
+      value: ejemplo@tapterminal.test
+    - type: text
+      key: phone
+      value: "+523141234567"
+    - type: text
+      key: password
+      value: Password123!
+    - type: file
+      key: profile_photo
+      src: []
+    - type: text
+      key: profile_ids[]
+      value: "{{access_profile_id}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 201) {
+          const body = pm.response.json();
+          const id = body.data && body.data.id;
+          if (id) { pm.collectionVariables.set('user_id', id); }
+      }
+    language: text/javascript
+order: 2000

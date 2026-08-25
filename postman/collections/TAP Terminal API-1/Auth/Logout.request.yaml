@@ -1,0 +1,7 @@
+$kind: http-request
+description: Revoca el token Sanctum utilizado en esta petición.
+url: "{{base_url}}/api/logout"
+method: POST
+headers:
+  Accept: application/json
+order: 3000

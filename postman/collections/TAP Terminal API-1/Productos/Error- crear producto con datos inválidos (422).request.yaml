@@ -1,0 +1,17 @@
+$kind: http-request
+name: "Error: crear producto con datos inválidos (422)"
+description: "Ejemplo de respuesta de validación 422: nombre y marca vacíos, precio con más de 3 dígitos."
+url: "{{base_url}}/api/products"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "name": "",
+      "brand": "",
+      "price": 5000
+    }
+order: 6000

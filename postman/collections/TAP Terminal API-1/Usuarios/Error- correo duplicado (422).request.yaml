@@ -1,0 +1,26 @@
+$kind: http-request
+name: "Error: correo duplicado (422)"
+description: Usa un correo que ya exista en el sistema para ver el error 422 de validación.
+url: "{{base_url}}/api/users"
+method: POST
+headers:
+  Accept: application/json
+body:
+  type: formdata
+  content:
+    - type: text
+      key: name
+      value: Usuario Duplicado
+    - type: text
+      key: email
+      value: pepelorenzo100@gmail.com
+    - type: text
+      key: password
+      value: Password123!
+    - type: file
+      key: profile_photo
+      src: []
+    - type: text
+      key: profile_ids[]
+      value: "{{access_profile_id}}"
+order: 6000

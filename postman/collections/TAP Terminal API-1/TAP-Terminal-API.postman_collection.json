@@ -1,0 +1,654 @@
+{
+  "info": {
+    "name": "TAP Terminal API",
+    "description": "Colección completa de la API REST de TAP Terminal. Incluye autenticación, productos, usuarios, perfiles de autorización, secciones y bitácora (audit log).\n\nUso rápido:\n1. Corre primero \"Auth > Login\" — guarda el token automáticamente en la variable de colección {{token}} mediante un script de test.\n2. Todas las demás peticiones ya usan Bearer {{token}} automáticamente.\n3. Cambia {{base_url}} si tu backend corre en otro puerto.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{token}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://127.0.0.1:8000", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "product_id", "value": "", "type": "string" },
+    { "key": "user_id", "value": "", "type": "string" },
+    { "key": "access_profile_id", "value": "", "type": "string" },
+    { "key": "section_id", "value": "", "type": "string" },
+    { "key": "reset_token", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Guarda el token automáticamente para las demás peticiones",
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    if (body.data && body.data.token) {",
+                  "        pm.collectionVariables.set('token', body.data.token);",
+                  "        console.log('Token guardado en {{token}}');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"pepelorenzo100@gmail.com\",\n  \"password\": \"NuevaPassword123!\",\n  \"device_name\": \"Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "login"]
+            },
+            "description": "Autentica al usuario y devuelve un token Sanctum. El script de Tests de esta petición guarda el token automáticamente en {{token}} para el resto de la colección."
+          }
+        },
+        {
+          "name": "Me (usuario autenticado)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "me"]
+            },
+            "description": "Devuelve el usuario autenticado junto con sus perfiles de autorización y las secciones a las que tiene acceso."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "logout"]
+            },
+            "description": "Revoca el token Sanctum utilizado en esta petición."
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"pepelorenzo100@gmail.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/forgot-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "forgot-password"]
+            },
+            "description": "Solicita recuperación de contraseña. Genera un token de recuperación (válido 60 min) y envía un correo. Con MAIL_MAILER=log, revisa storage/logs/laravel.log para ver el link generado y copiar el token para la siguiente petición."
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"pepelorenzo100@gmail.com\",\n  \"token\": \"{{reset_token}}\",\n  \"password\": \"NuevaPassword456!\",\n  \"password_confirmation\": \"NuevaPassword456!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reset-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "reset-password"]
+            },
+            "description": "Restablece la contraseña usando el token recibido por correo (o visto en el log). Pega el token en la variable de colección {{reset_token}} antes de enviar."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Productos",
+      "item": [
+        {
+          "name": "Listar productos",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/products",
+              "host": ["{{base_url}}"],
+              "path": ["api", "products"]
+            }
+          }
+        },
+        {
+          "name": "Crear producto",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    const id = body.id || (body.data && body.data.id);",
+                  "    if (id) { pm.collectionVariables.set('product_id', id); }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Producto de ejemplo\",\n  \"brand\": \"TAP\",\n  \"price\": 250\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/products",
+              "host": ["{{base_url}}"],
+              "path": ["api", "products"]
+            },
+            "description": "El código (PROD-...) y la fecha de creación se generan automáticamente. Guarda el id creado en {{product_id}}."
+          }
+        },
+        {
+          "name": "Consultar producto",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/products/{{product_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "products", "{{product_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Actualizar producto",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Producto actualizado\",\n  \"brand\": \"TAP\",\n  \"price\": 350\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/products/{{product_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "products", "{{product_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Eliminar producto",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/products/{{product_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "products", "{{product_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Error: crear producto con datos inválidos (422)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"brand\": \"\",\n  \"price\": 5000\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/products",
+              "host": ["{{base_url}}"],
+              "path": ["api", "products"]
+            },
+            "description": "Ejemplo de respuesta de validación 422: nombre y marca vacíos, precio con más de 3 dígitos."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Usuarios",
+      "item": [
+        {
+          "name": "Listar usuarios",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/users",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users"]
+            }
+          }
+        },
+        {
+          "name": "Crear usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    const id = body.data && body.data.id;",
+                  "    if (id) { pm.collectionVariables.set('user_id', id); }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "value": "Usuario de ejemplo", "type": "text" },
+                { "key": "email", "value": "ejemplo@tapterminal.test", "type": "text" },
+                { "key": "phone", "value": "+523141234567", "type": "text" },
+                { "key": "password", "value": "Password123!", "type": "text" },
+                { "key": "profile_photo", "type": "file", "src": [] },
+                { "key": "profile_ids[]", "value": "{{access_profile_id}}", "type": "text" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users"]
+            },
+            "description": "multipart/form-data. profile_ids[] es obligatorio (al menos uno) — corre primero 'Perfiles > Crear perfil' para tener un {{access_profile_id}} válido, o pega uno existente. profile_photo requiere seleccionar un archivo manualmente en Postman."
+          }
+        },
+        {
+          "name": "Consultar usuario",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/users/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", "{{user_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Actualizar usuario",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "value": "Usuario actualizado", "type": "text" },
+                { "key": "email", "value": "ejemplo@tapterminal.test", "type": "text" },
+                { "key": "phone", "value": "+523141234567", "type": "text" },
+                { "key": "profile_ids[]", "value": "{{access_profile_id}}", "type": "text" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", "{{user_id}}"]
+            },
+            "description": "La contraseña y la foto son opcionales al editar; si se omiten, se conservan las actuales."
+          }
+        },
+        {
+          "name": "Eliminar usuario",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/users/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", "{{user_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Error: correo duplicado (422)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "value": "Usuario Duplicado", "type": "text" },
+                { "key": "email", "value": "pepelorenzo100@gmail.com", "type": "text" },
+                { "key": "password", "value": "Password123!", "type": "text" },
+                { "key": "profile_photo", "type": "file", "src": [] },
+                { "key": "profile_ids[]", "value": "{{access_profile_id}}", "type": "text" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users"]
+            },
+            "description": "Usa un correo que ya exista en el sistema para ver el error 422 de validación."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Perfiles de autorización (Access Profiles)",
+      "item": [
+        {
+          "name": "Listar perfiles",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/access-profiles",
+              "host": ["{{base_url}}"],
+              "path": ["api", "access-profiles"]
+            }
+          }
+        },
+        {
+          "name": "Crear perfil",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    const id = body.data && body.data.id;",
+                  "    if (id) { pm.collectionVariables.set('access_profile_id', id); }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Perfil de ejemplo\",\n  \"description\": \"Acceso a productos\",\n  \"section_ids\": [\"{{section_id}}\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/access-profiles",
+              "host": ["{{base_url}}"],
+              "path": ["api", "access-profiles"]
+            },
+            "description": "El código (PRF-...) se genera automáticamente. section_ids es opcional pero recomendado — corre primero 'Secciones > Listar secciones' para obtener un {{section_id}} real."
+          }
+        },
+        {
+          "name": "Consultar perfil",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/access-profiles/{{access_profile_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "access-profiles", "{{access_profile_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Actualizar perfil",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Perfil actualizado\",\n  \"description\": \"Descripción actualizada\",\n  \"section_ids\": [\"{{section_id}}\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/access-profiles/{{access_profile_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "access-profiles", "{{access_profile_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Eliminar perfil",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/access-profiles/{{access_profile_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "access-profiles", "{{access_profile_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Secciones",
+      "item": [
+        {
+          "name": "Listar secciones",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    const list = body.data || body;",
+                  "    if (Array.isArray(list) && list.length > 0) {",
+                  "        const first = list[0];",
+                  "        const id = first.id || first._id;",
+                  "        if (id) { pm.collectionVariables.set('section_id', id); }",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/sections",
+              "host": ["{{base_url}}"],
+              "path": ["api", "sections"]
+            },
+            "description": "Guarda automáticamente el primer id de sección en {{section_id}}, útil para crear perfiles de prueba."
+          }
+        },
+        {
+          "name": "Crear sección",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"SEC-REPORTS\",\n  \"name\": \"Reportes\",\n  \"description\": \"Acceso al módulo de reportes\",\n  \"route\": \"/reports\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/sections",
+              "host": ["{{base_url}}"],
+              "path": ["api", "sections"]
+            }
+          }
+        },
+        {
+          "name": "Consultar sección",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/sections/{{section_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "sections", "{{section_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Actualizar sección",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"SEC-REPORTS\",\n  \"name\": \"Reportes actualizados\",\n  \"description\": \"Descripción actualizada\",\n  \"route\": \"/reports\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/sections/{{section_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "sections", "{{section_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Eliminar sección",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/sections/{{section_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "sections", "{{section_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Perfil personal",
+      "item": [
+        {
+          "name": "Ver mi perfil",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Actualizar mi perfil",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+523141234567\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profile"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bitácora (Audit Log)",
+      "item": [
+        {
+          "name": "Listar bitácora",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/audit-logs",
+              "host": ["{{base_url}}"],
+              "path": ["api", "audit-logs"]
+            },
+            "description": "Solo lectura. Los registros se generan automáticamente mediante el trait Auditable en los modelos Product, User, AccessProfile."
+          }
+        },
+        {
+          "name": "Filtrar bitácora por entidad",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/audit-logs?entity=products",
+              "host": ["{{base_url}}"],
+              "path": ["api", "audit-logs"],
+              "query": [{ "key": "entity", "value": "products" }]
+            }
+          }
+        },
+        {
+          "name": "Filtrar bitácora por rango de fechas",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/audit-logs?entity=users&from=2026-08-01&to=2026-08-25",
+              "host": ["{{base_url}}"],
+              "path": ["api", "audit-logs"],
+              "query": [
+                { "key": "entity", "value": "users" },
+                { "key": "from", "value": "2026-08-01" },
+                { "key": "to", "value": "2026-08-25" }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

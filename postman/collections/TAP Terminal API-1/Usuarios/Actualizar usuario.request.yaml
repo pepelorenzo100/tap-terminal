@@ -1,0 +1,22 @@
+$kind: http-request
+description: La contraseña y la foto son opcionales al editar; si se omiten, se conservan las actuales.
+url: "{{base_url}}/api/users/{{user_id}}"
+method: PUT
+headers:
+  Accept: application/json
+body:
+  type: formdata
+  content:
+    - type: text
+      key: name
+      value: Usuario actualizado
+    - type: text
+      key: email
+      value: ejemplo@tapterminal.test
+    - type: text
+      key: phone
+      value: "+523141234567"
+    - type: text
+      key: profile_ids[]
+      value: "{{access_profile_id}}"
+order: 4000

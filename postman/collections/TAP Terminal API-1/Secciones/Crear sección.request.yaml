@@ -1,0 +1,16 @@
+$kind: http-request
+url: "{{base_url}}/api/sections"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "code": "SEC-REPORTS",
+      "name": "Reportes",
+      "description": "Acceso al módulo de reportes",
+      "route": "/reports"
+    }
+order: 2000
