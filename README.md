@@ -1,85 +1,81 @@
 # TAP Terminal
 
-## Sistema de Administración de Productos
+## Sistema de Administración — Productos, Usuarios, Perfiles y Autenticación
 
-Aplicación web desarrollada para la administración de productos mediante una arquitectura separada de frontend y backend.
+Aplicación web desarrollada para la administración de productos, usuarios y perfiles de acceso, mediante una arquitectura separada de frontend y backend.
 
-El proyecto implementa un CRUD completo utilizando Angular, Laravel, PHP y MongoDB.
+El proyecto implementa CRUD completos utilizando Angular, Laravel, PHP y MongoDB, además de un módulo de autenticación con recuperación de contraseña, control de accesos por perfil y bitácora de cambios.
 
 ---
 
 # 1. Información del proyecto
 
-**Proyecto:** TAP Terminal  
-**Módulo:** Product Management  
-**Autor:** Ing. Jose Manuel Lorenzo Martinez  
-**Presentación:** Evaluación técnica / examen  
+**Proyecto:** TAP Terminal
+**Módulos:** Productos, Usuarios, Perfiles, Autenticación, Bitácora
+**Autor:** Ing. Jose Manuel Lorenzo Martinez
+**Presentación:** Evaluación técnica / examen de admisión — Área de Desarrollo
 
 ---
 
 # 2. Descripción
 
-TAP Terminal es una aplicación web para la administración de productos.
+TAP Terminal es una aplicación web para la administración de productos y del acceso de usuarios al sistema.
 
-El sistema permite realizar las operaciones principales de un CRUD:
+El sistema permite:
 
-- Crear productos.
-- Consultar productos.
-- Visualizar el detalle de productos.
-- Editar productos.
-- Eliminar productos.
-- Validar información.
-- Mostrar mensajes al usuario.
-- Generar códigos de producto automáticamente.
-- Exportar productos a Excel.
-- Exportar productos a PDF.
+- Gestionar productos (CRUD, export Excel/PDF).
+- Gestionar usuarios (CRUD, detalle con perfiles relacionados, export Excel/PDF).
+- Gestionar perfiles de acceso (CRUD, detalle con secciones relacionadas, export Excel/PDF).
+- Autenticar usuarios (login/logout, recuperación de contraseña).
+- Restringir el acceso a cada sección según el perfil del usuario.
+- Registrar en bitácora los cambios realizados sobre la información (valor anterior vs. actual).
 
 La aplicación está dividida en:
 
-- **Frontend:** Angular + TypeScript.
-- **Backend:** Laravel + PHP.
+- **Frontend:** Angular 19 + TypeScript 5.0.
+- **Backend:** Laravel 11 + PHP 8.2.
 - **Base de datos:** MongoDB.
 
 ---
 
 # 3. Arquitectura
 
-La comunicación principal del sistema sigue el siguiente flujo:
-
-```text
+```
 ┌──────────────────────────────┐
 │           ANGULAR            │
 │           FRONTEND           │
 └──────────────┬───────────────┘
-               │
                │ HTTP / JSON
                ▼
 ┌──────────────────────────────┐
-│       PRODUCT SERVICE        │
-│       Angular HttpClient     │
+│      SERVICES (Angular)      │
+│  ProductService / UserService│
+│  ProfileService / AuthService│
 └──────────────┬───────────────┘
-               │
                │ REST API
                ▼
 ┌──────────────────────────────┐
-│           LARAVEL            │
-│            API               │
+│           LARAVEL             │
+│             API               │
 └──────────────┬───────────────┘
                │
                ▼
 ┌──────────────────────────────┐
-│      PRODUCT CONTROLLER      │
+│          CONTROLLERS          │
+│ Product / User / Profile /    │
+│ Auth / AuditLog                │
 └──────────────┬───────────────┘
                │
                ▼
 ┌──────────────────────────────┐
-│        PRODUCT MODEL         │
+│            MODELS             │
 └──────────────┬───────────────┘
                │
                ▼
 ┌──────────────────────────────┐
-│          MONGODB             │
-│          products            │
+│            MONGODB            │
+│ products / users / profiles / │
+│ audit_logs                    │
 └──────────────────────────────┘
 ```
 
@@ -88,1287 +84,404 @@ La comunicación principal del sistema sigue el siguiente flujo:
 # 4. Tecnologías utilizadas
 
 ## Frontend
-
-- Angular
-- TypeScript
-- HTML
-- CSS
+- Angular 19
+- TypeScript 5.0
+- HTML / CSS
 - Angular Forms
 - Angular HttpClient
-- Jasmine
-- Karma
+- Angular Guards (control de accesos por perfil)
+- Jasmine / Karma
 - SheetJS / XLSX
-- jsPDF
-- jspdf-autotable
+- jsPDF / jspdf-autotable
 
 ## Backend
-
-- PHP
-- Laravel
+- PHP 8.2
+- Laravel 11
 - Laravel REST API
 - PHPUnit
+- Hashing de contraseñas (bcrypt / Laravel Hash)
 
 ## Base de datos
-
-- MongoDB
+- MongoDB (colecciones: `products`, `users`, `profiles`, `audit_logs`)
 
 ## Herramientas de desarrollo
-
-- Visual Studio Code
-- PowerShell
-- Google Chrome
-- npm
-- Composer
+- Visual Studio Code, PowerShell, Google Chrome, npm, Composer
+- Postman (documentación de API)
 
 ## Sistema operativo
-
 - Windows
 
 ---
 
 # 5. Funcionalidades
 
-El módulo de productos implementa:
-
-```text
-CREATE
-READ
-UPDATE
-DELETE
+## Productos
+```
+CREATE / READ / UPDATE / DELETE
+VALIDACIONES
+GENERACIÓN AUTOMÁTICA DE CÓDIGO
+EXPORTACIÓN EXCEL / PDF
 ```
 
-Además:
+## Usuarios
+```
+CREATE / READ / UPDATE / DELETE
+DETALLE DE USUARIO (perfiles relacionados)
+FOTO DE PERFIL
+TELÉFONO CON CÓDIGO DE PAÍS (opcional)
+GENERACIÓN AUTOMÁTICA DE CÓDIGO
+EXPORTACIÓN EXCEL / PDF
+```
 
-```text
-VALIDACIONES
-VISUALIZACIÓN DE DETALLE
-MENSAJES DE SISTEMA
-GENERACIÓN AUTOMÁTICA DE CÓDIGOS
-EXPORTACIÓN A EXCEL
-EXPORTACIÓN A PDF
+## Perfiles
+```
+CREATE / READ / UPDATE / DELETE
+DETALLE DE PERFIL EN MODAL (secciones relacionadas)
+GENERACIÓN AUTOMÁTICA DE CÓDIGO
+EXPORTACIÓN EXCEL / PDF
+```
+
+## Autenticación
+```
+LOGIN / LOGOUT
+RECUPERACIÓN DE CONTRASEÑA
+  - Validación de existencia del usuario
+  - Envío de credenciales al correo registrado
+```
+
+## Control de accesos
+```
+Los usuarios solo acceden a las secciones asignadas a su perfil.
+```
+
+## Bitácora
+```
+Registro de valores anteriores y actuales ante cada cambio
+en productos, usuarios y perfiles.
 ```
 
 ---
 
 # 6. CRUD de productos
 
-## 6.1 Crear
+Sin cambios respecto al módulo original: alta, consulta, visualización, edición y eliminación de productos, con generación automática de código y validación de nombre, marca y precio (máx. 3 dígitos).
 
-Permite registrar un producto utilizando:
+---
 
-```text
+# 7. Usuarios
+
+## 7.1 Alta de usuario
+
+Campos:
+```
+Nombre        (requerido)
+Foto de perfil (requerido)
+Usuario        (requerido, correo electrónico único)
+Teléfono       (opcional, debe incluir código de país)
+```
+
+El código de usuario se genera automáticamente (mismo criterio que productos: ULID).
+La fecha de creación se guarda automáticamente.
+
+## 7.2 Consulta de usuarios
+
+Tabla con: código de usuario, usuario, nombre, fecha de creación (DD/MM/YYYY HH:MM).
+Acciones: edición, eliminación, detalle.
+
+## 7.3 Detalle de usuario
+
+```
+Usuario
 Nombre
-Marca
-Precio
+Número de teléfono
+Foto de perfil
+Lista de perfiles relacionados al usuario
 ```
 
-El código del producto no se introduce manualmente.
+## 7.4 Edición y eliminación
 
-El backend genera automáticamente el código.
+Mismos criterios que en productos: edición de campos permitidos, eliminación con confirmación previa del usuario.
 
 ---
 
-## 6.2 Consultar
+# 8. Perfiles de usuario
 
-La aplicación consulta los productos mediante:
+## 8.1 Alta / consulta
 
-```http
-GET /api/products
+Tabla con: código de perfil, nombre, fecha de creación (DD/MM/YYYY HH:MM).
+Acciones: edición, eliminación, detalle (modal).
+
+## 8.2 Detalle de perfil (modal)
+
 ```
+Código de perfil
+Nombre de perfil
+Fecha de creación de perfil
+Lista de secciones relacionadas al perfil
+```
+
+Las "secciones" representan las pantallas/módulos del sistema (Productos, Usuarios, Perfiles, etc.) a las que el perfil da acceso.
 
 ---
 
-## 6.3 Visualizar
+# 9. Autenticación
 
-El usuario puede seleccionar un producto para consultar sus detalles.
+## 9.1 Login / Logout
 
----
+Autenticación contra la colección `users` de MongoDB, verificando la contraseña cifrada.
 
-## 6.4 Editar
+## 9.2 Recuperación de contraseña
 
-Permite modificar:
-
-```text
-Nombre
-Marca
-Precio
-```
-
-El código del producto permanece sin modificación.
+Flujo:
+1. El usuario solicita recuperación indicando su correo (usuario).
+2. El backend valida que el usuario exista en la base de datos.
+3. Si existe, se envían las credenciales/instrucciones al correo registrado.
+4. Si no existe, se responde sin revelar si el correo está o no registrado (buena práctica de seguridad).
 
 ---
 
-## 6.5 Eliminar
+# 10. Control de accesos
 
-Permite eliminar un producto después de solicitar confirmación al usuario.
+Cada usuario puede tener uno o varios perfiles de autorización (`AccessProfile`), y cada perfil define la lista de secciones (`Section`) a las que da acceso.
+
+Flujo de autorización (middleware `CheckSectionPermission`, usado como `section:SEC-PRODUCTS`, `section:SEC-USERS`, `section:SEC-PROFILES`):
+
+```
+Request → ¿usuario autenticado? (401 si no)
+        → ¿tiene perfiles asignados? (403 si no)
+        → ¿la sección solicitada existe? (403 si no)
+        → ¿alguno de sus perfiles incluye esa sección? (403 si no)
+        → autorizado → continúa al controlador
+```
+
+- **Backend:** middleware `App\Http\Middleware\CheckSectionPermission.php`, aplicado por grupo de rutas en `routes/api.php`.
+- **Frontend:** Angular Guards (`auth.guard.ts`, `section.guard.ts`) que restringen la navegación a las rutas no autorizadas y ocultan del menú las secciones sin acceso.
 
 ---
 
-# 7. Validaciones
+# 11. Seguridad
 
-## 7.1 Validaciones del Frontend
-
-Angular valida la información antes de enviarla al backend.
-
-### Nombre
-
-El nombre es obligatorio.
-
-### Marca
-
-La marca es obligatoria.
-
-### Precio
-
-El precio debe:
-
-- Ser numérico.
-- Ser mayor o igual a `0`.
-- Ser menor o igual a `999.99`.
+- Las contraseñas se almacenan cifradas (hash), nunca en texto plano.
+- Validaciones de formularios duplicadas en frontend (experiencia de usuario) y backend (autoridad final).
+- No se expone información sensible en las respuestas de la API (por ejemplo, el hash de la contraseña nunca se retorna en `GET /api/users`).
+- Variables sensibles (credenciales de MongoDB, claves de correo, tokens) se mantienen en `backend/.env`, fuera del control de versiones.
 
 ---
 
-## 7.2 Validaciones del Backend
+# 12. Bitácora
 
-Laravel vuelve a validar la información recibida.
+Cada operación de creación, edición o eliminación sobre `products`, `users` y `profiles` genera un registro en la colección `audit_logs` con:
 
-### name
-
-```text
-required
-string
-max:100
+```
+entidad         (products | users | profiles)
+entidad_id
+acción           (create | update | delete)
+valores_anteriores
+valores_actuales
+usuario_responsable
+fecha
 ```
 
-### brand
+Esto permite comparar el estado anterior de un registro contra el estado actual ante cualquier cambio.
 
-```text
-required
-string
-max:100
-```
-
-### price
-
-```text
-required
-numeric
-min:0
-max:999.99
-```
-
-La validación del backend es necesaria aunque el frontend también valide los datos.
-
-Nunca se debe confiar únicamente en las validaciones realizadas por el cliente.
+La consulta de bitácora está disponible vía API (`GET /api/audit-logs`, con filtros opcionales por entidad y rango de fechas).
 
 ---
 
-# 8. API REST
+# 13. API REST
 
-La API principal utiliza:
+Todas las rutas, salvo las de autenticación pública, requieren el header:
 
-```text
-/api/products
+```
+Authorization: Bearer {token}
 ```
 
----
+y además están protegidas por el middleware `section:{CODIGO_SECCION}`,
+que valida que el perfil de autorización del usuario incluya esa sección
+(ver punto 10, Control de accesos).
 
-## 8.1 Obtener todos los productos
-
-```http
-GET /api/products
+## 13.1 Autenticación (públicas, sin token)
+```
+POST   /api/login
+POST   /api/forgot-password
+POST   /api/reset-password
 ```
 
-Obtiene todos los productos disponibles.
-
----
-
-## 8.2 Crear producto
-
-```http
-POST /api/products
+## 13.2 Sesión (requieren token, sin sección específica)
+```
+GET    /api/me       — usuario autenticado + perfiles + secciones permitidas
+POST   /api/logout
 ```
 
-Ejemplo:
-
-```json
-{
-    "name": "Producto de prueba",
-    "brand": "TAP Terminal",
-    "price": 350
-}
+## 13.3 Productos — sección `SEC-PRODUCTS`
+```
+GET    /api/products
+POST   /api/products
+GET    /api/products/{product}
+PUT    /api/products/{product}
+PATCH  /api/products/{product}
+DELETE /api/products/{product}
 ```
 
-El frontend únicamente envía:
-
-```text
-name
-brand
-price
+## 13.4 Usuarios — sección `SEC-USERS`
+```
+GET    /api/users
+POST   /api/users            (multipart/form-data: name, email, phone, password, profile_photo, profile_ids[])
+GET    /api/users/{user}
+PUT    /api/users/{user}
+PATCH  /api/users/{user}
+DELETE /api/users/{user}
 ```
 
-El backend administra:
-
-```text
-id
-code
-created_at
-updated_at
+## 13.5 Perfiles de autorización (AccessProfile) — sección `SEC-PROFILES`
+```
+GET    /api/access-profiles
+POST   /api/access-profiles  (name, description, section_ids[])
+GET    /api/access-profiles/{access_profile}
+PUT    /api/access-profiles/{access_profile}
+PATCH  /api/access-profiles/{access_profile}
+DELETE /api/access-profiles/{access_profile}
 ```
 
-La creación correcta devuelve:
-
-```text
-HTTP 201 Created
+## 13.6 Secciones — sección `SEC-PROFILES`
+```
+GET    /api/sections
+POST   /api/sections
+GET    /api/sections/{section}
+PUT    /api/sections/{section}
+PATCH  /api/sections/{section}
+DELETE /api/sections/{section}
 ```
 
----
-
-## 8.3 Obtener un producto
-
-```http
-GET /api/products/{id}
+## 13.7 Perfil personal del usuario (Profile) — requiere solo autenticación
+```
+GET    /api/profile
+PUT    /api/profile
+DELETE /api/profile
 ```
 
-Obtiene un producto mediante su identificador.
+> Nota importante: en este proyecto **"Profile"** y **"AccessProfile"** son
+> conceptos distintos. `Profile` es la información personal del usuario
+> autenticado; `AccessProfile` es el perfil de permisos que agrupa las
+> secciones a las que un usuario tiene acceso (lo que el examen llama
+> "Perfiles de Usuarios").
 
-Si el producto no existe:
-
-```text
-HTTP 404 Not Found
+## 13.8 Bitácora — solo lectura
 ```
-
----
-
-## 8.4 Actualizar producto
-
-```http
-PUT /api/products/{id}
-```
-
-También se permite:
-
-```http
-PATCH /api/products/{id}
-```
-
-Los campos modificables son:
-
-```text
-name
-brand
-price
-```
-
-El campo:
-
-```text
-code
-```
-
-no puede modificarse mediante el flujo normal de actualización.
-
----
-
-## 8.5 Eliminar producto
-
-```http
-DELETE /api/products/{id}
-```
-
-El backend elimina el producto correspondiente de MongoDB.
-
----
-
-# 9. Rutas Laravel
-
-Las rutas principales verificadas mediante:
-
-```powershell
-php artisan route:list
-```
-
-son:
-
-```text
-GET|HEAD     api/products
-POST         api/products
-GET|HEAD     api/products/{product}
-PUT|PATCH    api/products/{product}
-DELETE       api/products/{product}
-```
-
-Estas rutas corresponden al controlador:
-
-```text
-App\Http\Controllers\Api\ProductController
+GET    /api/audit-logs
+GET    /api/audit-logs?entity=products
+GET    /api/audit-logs?entity=users&from=2026-08-01&to=2026-08-25
 ```
 
 ---
 
-# 10. ProductController
+# 14. Documentación de API (Postman)
 
-Archivo:
-
-```text
-backend/app/Http/Controllers/Api/ProductController.php
-```
-
-Responsabilidades:
-
-- Obtener productos.
-- Crear productos.
-- Obtener un producto específico.
-- Actualizar productos.
-- Eliminar productos.
-- Validar solicitudes.
-- Generar respuestas JSON.
-
-Métodos principales:
-
-```text
-index()
-store()
-show()
-update()
-destroy()
-```
+La colección de Postman (carpeta `postman/`) incluye ejemplos de petición y respuesta para los cinco grupos de endpoints anteriores (productos, usuarios, perfiles, autenticación y bitácora), incluyendo casos de error (404, 422) y el flujo completo de login → uso de token → logout.
 
 ---
 
-# 11. Product Model
+# 15. Pruebas automatizadas
 
-Archivo:
-
-```text
-backend/app/Models/Product.php
+## Frontend (Jasmine/Karma)
 ```
-
-El modelo representa los productos almacenados en MongoDB.
-
-Colección:
-
-```text
-products
-```
-
----
-
-## 11.1 Campos asignables
-
-Los campos permitidos son:
-
-```text
-name
-brand
-price
-```
-
-El modelo utiliza:
-
-```php
-protected $fillable = [
-    'name',
-    'brand',
-    'price',
-];
-```
-
-El campo:
-
-```text
-code
-```
-
-no forma parte de `$fillable`.
-
-Esto evita que el código sea enviado libremente mediante asignación masiva desde el frontend.
-
----
-
-# 12. Generación automática del código
-
-El backend genera automáticamente el código del producto.
-
-La generación se realiza mediante el evento:
-
-```text
-creating
-```
-
-del modelo `Product`.
-
-El código utiliza un ULID.
-
-Formato:
-
-```text
-PROD-XXXXXXXXXXXXXXXXXXXXXXXXXX
-```
-
-Ejemplo:
-
-```text
-PROD-01M0JQ510K901CYY1CC6PR17MF
-```
-
-El código es responsabilidad del backend.
-
-El frontend no necesita generarlo.
-
----
-
-# 13. Timestamps
-
-Laravel administra automáticamente:
-
-```text
-created_at
-updated_at
-```
-
-Al crear un producto se registran:
-
-```text
-created_at
-updated_at
-```
-
-Al actualizar un producto se actualiza:
-
-```text
-updated_at
-```
-
----
-
-# 14. Precio
-
-El modelo utiliza:
-
-```php
-protected $casts = [
-    'price' => 'decimal:2',
-];
-```
-
-Esto permite manejar el precio con dos posiciones decimales.
-
-Ejemplos:
-
-```text
-250.00
-250.50
-999.99
-```
-
-El uso de una representación decimal es apropiado para valores monetarios.
-
----
-
-# 15. Frontend
-
-El módulo principal de productos se implementa mediante Angular.
-
-Componente principal:
-
-```text
-frontend/src/app/pages/products/products.component.ts
-```
-
-Responsabilidades:
-
-- Cargar productos.
-- Crear productos.
-- Editar productos.
-- Visualizar productos.
-- Eliminar productos.
-- Validar información.
-- Mostrar mensajes.
-- Exportar Excel.
-- Exportar PDF.
-
----
-
-# 16. ProductService
-
-El componente Angular utiliza:
-
-```text
-ProductService
-```
-
-para comunicarse con Laravel.
-
-El flujo es:
-
-```text
-ProductsComponent
-        ↓
-ProductService
-        ↓
-HttpClient
-        ↓
-REST API
-        ↓
-Laravel
-```
-
-Esto mantiene separada la lógica de presentación de la comunicación con el backend.
-
----
-
-# 17. Exportación a Excel
-
-El sistema permite exportar los productos a Excel.
-
-La funcionalidad utiliza:
-
-```text
-XLSX / SheetJS
-```
-
-Archivo generado:
-
-```text
-productos-tap-terminal.xlsx
-```
-
-La información exportada incluye:
-
-```text
-Código
-Nombre
-Marca
-Precio
-Fecha de creación
-```
-
-La exportación se realiza directamente desde Angular.
-
----
-
-# 18. Exportación a PDF
-
-El sistema permite generar un PDF con el listado de productos.
-
-Librerías utilizadas:
-
-```text
-jsPDF
-jspdf-autotable
-```
-
-Archivo generado:
-
-```text
-productos-tap-terminal.pdf
-```
-
-El PDF incluye:
-
-```text
-TAP Terminal
-Listado de productos
-Fecha de generación
-Código
-Nombre
-Marca
-Precio
-Fecha de creación
-```
-
----
-
-# 19. Pruebas automatizadas del Frontend
-
-El frontend utiliza:
-
-```text
-Jasmine
-Karma
-```
-
-Las pruebas se ejecutan mediante:
-
-```powershell
 npm test
 ```
+Cobertura: componentes de productos, usuarios, perfiles y autenticación.
 
-Durante la validación del proyecto se obtuvo:
-
-```text
-Executed 25 of 25 SUCCESS
-
-TOTAL: 25 SUCCESS
+## Backend (PHPUnit)
 ```
-
-Esto confirma que las 25 pruebas ejecutadas por Karma finalizaron correctamente.
-
-Durante la ejecución de Karma puede aparecer posteriormente un mensaje de desconexión del navegador al finalizar el proceso:
-
-```text
-Disconnected Client disconnected from CONNECTED state
-```
-
-Este mensaje apareció después de:
-
-```text
-25 SUCCESS
-```
-
-por lo que no cambia el resultado de las pruebas ejecutadas.
-
----
-
-# 20. Pruebas automatizadas del Backend
-
-El backend utiliza Laravel/PHPUnit.
-
-Ejecutar:
-
-```powershell
 php artisan test
 ```
-
-Durante la validación realizada para el proyecto se obtuvo:
-
-```text
-8 passed
-32 assertions
-```
-
-Las pruebas verifican diferentes comportamientos del backend y del módulo de productos, incluyendo operaciones CRUD y validaciones.
+Cobertura: CRUD de productos, usuarios, perfiles, autenticación y generación de bitácora.
 
 ---
 
-# 21. Compilación del Frontend
+# 16. Ejecución del proyecto
 
-Para generar el build:
-
-```powershell
-npm run build
+## Backend
 ```
-
-Durante la validación se obtuvo:
-
-```text
-Application bundle generation complete.
-```
-
-La salida se genera en:
-
-```text
-frontend/dist/frontend
-```
-
-La compilación del frontend fue completada correctamente.
-
----
-
-# 22. Ejecución del Backend
-
-Entrar a:
-
-```powershell
 cd C:\proyectos\tap-terminal\backend
-```
-
-Ejecutar:
-
-```powershell
+composer install
 php artisan serve --host=127.0.0.1 --port=8080
 ```
+API: `http://127.0.0.1:8080/api`
 
-Backend:
-
-```text
-http://127.0.0.1:8080
+## Frontend
 ```
-
-API:
-
-```text
-http://127.0.0.1:8080/api
-```
-
----
-
-# 23. Ejecución del Frontend
-
-Abrir otra terminal.
-
-Entrar a:
-
-```powershell
 cd C:\proyectos\tap-terminal\frontend
-```
-
-Instalar dependencias:
-
-```powershell
 npm install
-```
-
-Ejecutar:
-
-```powershell
 npm start
 ```
-
-o:
-
-```powershell
-ng serve
-```
-
-Frontend:
-
-```text
-http://localhost:4200
-```
+Frontend: `http://localhost:4200`
 
 ---
 
-# 24. Puerto 4200
+# 17. Estructura general del proyecto
 
-Si aparece:
-
-```text
-Port 4200 is already in use.
 ```
-
-significa que otro proceso está utilizando ese puerto.
-
-Puede verificarse mediante:
-
-```powershell
-netstat -ano | findstr :4200
-```
-
-Si ya existe una instancia de Angular funcionando correctamente en:
-
-```text
-http://localhost:4200
-```
-
-no es necesario iniciar otra instancia.
-
----
-
-# 25. Verificación de la API
-
-El backend debe estar ejecutándose antes de probar la comunicación desde Angular.
-
-Backend:
-
-```text
-http://127.0.0.1:8080
-```
-
-Endpoint:
-
-```text
-http://127.0.0.1:8080/api/products
-```
-
-Durante la validación se verificó:
-
-```text
-GET /api/products
-```
-
-con respuesta:
-
-```text
-HTTP 200 OK
-```
-
-Esto confirma la comunicación entre Angular y el endpoint de productos durante la prueba de integración.
-
----
-
-# 26. Flujo completo del CRUD
-
-## CREATE
-
-```text
-Usuario
-   ↓
-Formulario Angular
-   ↓
-ProductsComponent
-   ↓
-ProductService
-   ↓
-POST /api/products
-   ↓
-ProductController
-   ↓
-Product Model
-   ↓
-MongoDB
-```
-
----
-
-## READ
-
-```text
-Usuario
-   ↓
-Angular
-   ↓
-ProductService
-   ↓
-GET /api/products
-   ↓
-Laravel
-   ↓
-MongoDB
-   ↓
-Angular
-```
-
----
-
-## UPDATE
-
-```text
-Usuario
-   ↓
-Editar producto
-   ↓
-ProductsComponent
-   ↓
-ProductService
-   ↓
-PUT /api/products/{id}
-   ↓
-Laravel
-   ↓
-MongoDB
-   ↓
-Angular
-```
-
----
-
-## DELETE
-
-```text
-Usuario
-   ↓
-Eliminar
-   ↓
-Confirmación
-   ↓
-ProductService
-   ↓
-DELETE /api/products/{id}
-   ↓
-Laravel
-   ↓
-MongoDB
-   ↓
-Angular actualiza la lista
-```
-
----
-
-# 27. Estructura general del proyecto
-
-```text
 tap-terminal/
 │
 ├── backend/
-│   │
 │   ├── app/
-│   │   ├── Http/
-│   │   │   └── Controllers/
-│   │   │       └── Api/
-│   │   │           └── ProductController.php
-│   │   │
+│   │   ├── Http/Controllers/Api/
+│   │   │   ├── ProductController.php
+│   │   │   ├── UserController.php
+│   │   │   ├── ProfileController.php
+│   │   │   ├── AuthController.php
+│   │   │   └── AuditLogController.php
 │   │   └── Models/
-│   │       └── Product.php
-│   │
-│   ├── routes/
-│   │   └── api.php
-│   │
+│   │       ├── Product.php
+│   │       ├── User.php
+│   │       ├── Profile.php
+│   │       └── AuditLog.php
+│   ├── routes/api.php
 │   ├── tests/
-│   │   ├── Feature/
-│   │   └── Unit/
-│   │
-│   ├── artisan
-│   ├── composer.json
 │   └── .env
 │
 ├── frontend/
-│   │
-│   ├── src/
-│   │   └── app/
-│   │       ├── models/
-│   │       │   └── product.ts
-│   │       │
-│   │       ├── services/
-│   │       │   └── product.service.ts
-│   │       │
-│   │       └── pages/
-│   │           └── products/
-│   │               ├── products.component.ts
-│   │               ├── products.component.html
-│   │               ├── products.component.css
-│   │               └── products.component.spec.ts
-│   │
-│   ├── angular.json
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── tsconfig.spec.json
+│   └── src/app/
+│       ├── models/
+│       ├── services/
+│       ├── guards/
+│       └── pages/
+│           ├── products/
+│           ├── users/
+│           ├── profiles/
+│           └── auth/
 │
+├── postman/
+├── .github/workflows/
 └── README.md
 ```
 
 ---
 
-# 28. Requisitos del proyecto
+# 18. Variables de entorno
 
-Para trabajar con el proyecto se requiere:
-
-```text
-Windows
-PHP
-Composer
-Node.js
-npm
-Angular CLI
-MongoDB
-Visual Studio Code
-Google Chrome
-```
-
-Las versiones instaladas pueden consultarse mediante:
-
-```powershell
-php --version
-composer --version
-node --version
-npm --version
-ng version
-```
+No deben publicarse en el repositorio: contraseñas, tokens, API keys, credenciales de MongoDB ni claves de correo (usadas para la recuperación de contraseña). Usar `.env.example` sin credenciales reales para compartir configuración.
 
 ---
 
-# 29. Instalación inicial
+# 19. Estado final
 
-## Backend
-
-Entrar al backend:
-
-```powershell
-cd C:\proyectos\tap-terminal\backend
 ```
-
-Instalar dependencias:
-
-```powershell
-composer install
-```
-
-Configurar el archivo:
-
-```text
-backend/.env
-```
-
-Después iniciar Laravel:
-
-```powershell
-php artisan serve --host=127.0.0.1 --port=8080
-```
-
----
-
-## Frontend
-
-Abrir otra terminal:
-
-```powershell
-cd C:\proyectos\tap-terminal\frontend
-```
-
-Instalar dependencias:
-
-```powershell
-npm install
-```
-
-Iniciar Angular:
-
-```powershell
-npm start
-```
-
----
-
-# 30. Variables de entorno
-
-La configuración sensible debe mantenerse en:
-
-```text
-backend/.env
-```
-
-No deben publicarse:
-
-```text
-Contraseñas
-Tokens
-API Keys
-Credenciales de MongoDB
-Secretos
-Claves privadas
-```
-
-Para compartir el proyecto se recomienda utilizar:
-
-```text
-.env.example
-```
-
-sin credenciales reales.
-
----
-
-# 31. Comandos principales
-
-## Backend
-
-```powershell
-cd C:\proyectos\tap-terminal\backend
-```
-
-```powershell
-php artisan serve --host=127.0.0.1 --port=8080
-```
-
-```powershell
-php artisan test
-```
-
-```powershell
-php artisan route:list
-```
-
-```powershell
-php artisan
-```
-
----
-
-## Frontend
-
-```powershell
-cd C:\proyectos\tap-terminal\frontend
-```
-
-```powershell
-npm install
-```
-
-```powershell
-npm start
-```
-
-```powershell
-npm test
-```
-
-```powershell
-npm run build
-```
-
----
-
-# 32. Validación funcional
-
-Durante la evaluación del proyecto se verificaron directamente desde la interfaz las operaciones:
-
-```text
-Crear       ✅
-Consultar   ✅
-Visualizar  ✅
-Editar      ✅
-Eliminar    ✅
-```
-
-También se verificaron:
-
-```text
-Validaciones          ✅
-Exportación Excel     ✅
-Exportación PDF       ✅
-Comunicación API      ✅
-```
-
----
-
-# 33. Validación técnica
-
-Estado de los principales componentes:
-
-| Elemento | Estado |
-|---|---|
-| Angular | ✅ |
-| TypeScript | ✅ |
-| Laravel | ✅ |
-| PHP | ✅ |
-| MongoDB | ✅ |
-| API REST | ✅ |
-| CRUD | ✅ |
-| Crear producto | ✅ |
-| Consultar productos | ✅ |
-| Visualizar producto | ✅ |
-| Editar producto | ✅ |
-| Eliminar producto | ✅ |
-| Validaciones | ✅ |
-| Generación de código | ✅ |
-| Exportación Excel | ✅ |
-| Exportación PDF | ✅ |
-| Pruebas Frontend | ✅ 25/25 |
-| Pruebas Backend | ✅ 8 passed / 32 assertions |
-| Angular Build | ✅ |
-| Rutas Laravel | ✅ |
-| Comunicación Angular → Laravel | ✅ |
-| Problems en VS Code | ✅ 0 |
-
----
-
-# 34. Mantenimiento
-
-Antes de modificar una funcionalidad existente:
-
-1. Identificar el componente Angular.
-2. Revisar el servicio correspondiente.
-3. Revisar el endpoint.
-4. Revisar el controlador Laravel.
-5. Revisar el modelo.
-6. Revisar las pruebas existentes.
-7. Realizar el cambio.
-8. Ejecutar las pruebas.
-9. Ejecutar el build.
-10. Probar nuevamente la funcionalidad desde la interfaz.
-
-Después de cambios importantes:
-
-### Frontend
-
-```powershell
-npm test
-```
-
-```powershell
-npm run build
-```
-
-### Backend
-
-```powershell
-php artisan test
-```
-
-### Rutas
-
-```powershell
-php artisan route:list
-```
-
----
-
-# 35. Buenas prácticas
-
-El proyecto mantiene una separación de responsabilidades:
-
-```text
-Component
-    ↓
-Service
-    ↓
-API
-    ↓
-Controller
-    ↓
-Model
-    ↓
-Database
-```
-
-El frontend se encarga principalmente de:
-
-- Interfaz.
-- Interacción con el usuario.
-- Validaciones de experiencia de usuario.
-- Consumo de API.
-- Presentación de información.
-- Exportaciones.
-
-El backend se encarga principalmente de:
-
-- Validación de datos.
-- Reglas de negocio.
-- Operaciones CRUD.
-- Generación del código.
-- Comunicación con MongoDB.
-- Respuestas HTTP.
-
----
-
-# 36. Seguridad
-
-No almacenar en el repositorio:
-
-- Contraseñas.
-- Tokens.
-- API Keys.
-- Credenciales de MongoDB.
-- Secretos.
-- Claves privadas.
-
-El archivo `.env` debe permanecer fuera del repositorio cuando contenga información sensible.
-
-Para compartir la configuración se debe utilizar:
-
-```text
-.env.example
-```
-
-sin credenciales reales.
-
----
-
-# 37. Estado final
-
-```text
 =========================================
              TAP TERMINAL
-       PRODUCT MANAGEMENT SYSTEM
 =========================================
 
-Frontend:        READY
-Backend:         READY
-Database:        READY
-REST API:        READY
-CRUD:            READY
-Validation:      READY
-Excel Export:    READY
-PDF Export:      READY
+Productos:        READY
+Usuarios:         READY
+Perfiles:         READY
+Autenticación:    READY
+Control accesos:  READY
+Seguridad:        READY
+Bitácora:         READY
+Documentación API: READY (Postman)
 
-Frontend Tests:  25/25 SUCCESS
-Backend Tests:   8 PASSED
-Assertions:      32
-Build:           SUCCESS
-API:             SUCCESS
-CRUD UI:         VERIFIED
-Problems:        0
+Frontend Tests:   READY
+Backend Tests:    READY
+Build:            READY
 
 =========================================
               STATUS: READY
@@ -1377,85 +490,8 @@ Problems:        0
 
 ---
 
-# 38. Autor
+# 20. Autor
 
 **Ing. Jose Manuel Lorenzo Martinez**
 
-Autor y desarrollador del proyecto:
-
-```text
-TAP Terminal
-```
-
-Módulo presentado:
-
-```text
-Product Management
-```
-
-El proyecto es presentado por el:
-
-**Ing. Jose Manuel Lorenzo Martinez**
-
-como parte de un proceso de evaluación técnica / examen.
-
----
-
-# 39. Licencia
-
-Proyecto desarrollado para fines de evaluación, demostración y desarrollo profesional.
-
-La distribución y uso del proyecto deberán realizarse de acuerdo con las condiciones establecidas por el propietario del proyecto.
-
----
-
-# 40. Resumen final
-
-TAP Terminal implementa una arquitectura web separada por responsabilidades:
-
-```text
-Angular
-Frontend y experiencia de usuario
-        ↓
-ProductService
-Comunicación HTTP
-        ↓
-Laravel API
-Reglas y operaciones del backend
-        ↓
-ProductController
-Administración de solicitudes
-        ↓
-Product Model
-Representación de datos
-        ↓
-MongoDB
-Persistencia
-```
-
-El módulo de productos cuenta con:
-
-```text
-CRUD completo
-Validaciones
-Generación automática de códigos
-API REST
-Persistencia MongoDB
-Pruebas automatizadas
-Exportación Excel
-Exportación PDF
-Documentación
-```
-
-El proyecto fue validado funcional y técnicamente durante la evaluación.
-
-```text
-=========================================
-             TAP TERMINAL
-=========================================
-
-        Ing. Jose Manuel Lorenzo Martinez
-
-              STATUS: READY
-=========================================
-```
+Proyecto presentado como parte del proceso de evaluación técnica / examen de admisión — Área de Desarrollo, Grupo TAP Terminal.
