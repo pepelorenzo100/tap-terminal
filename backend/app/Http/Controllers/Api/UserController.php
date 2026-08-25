@@ -7,33 +7,37 @@ namespace App\Http\Controllers\Api;
 | TAP TERMINAL - USER CONTROLLER
 |--------------------------------------------------------------------------
 |
-| Este controlador administra los usuarios del sistema.
+| Administra los usuarios del sistema.
 |
 | Funcionalidades:
 |
-| - Listar usuarios
-| - Crear usuarios
-| - Consultar un usuario
-| - Actualizar usuarios
-| - Eliminar usuarios
+| - Listar usuarios.
+| - Crear usuarios.
+| - Consultar usuario.
+| - Actualizar usuario.
+| - Eliminar usuario.
+| - Asignar perfiles de autorización.
+| - Cambiar perfiles de autorización.
+| - Mostrar perfiles asignados.
+| - Gestionar fotografía de perfil.
 |
-| Seguridad:
+| Relación de autorización:
 |
-| - Validación de datos
-| - Correo electrónico único
-| - Contraseña almacenada mediante hash
-| - Contraseña nunca expuesta en respuestas
-| - Foto de perfil almacenada en storage público
-|
-| Base de datos:
-|
-| MongoDB
+|     User
+|       ↓
+|     UserProfile
+|       ↓
+|     AccessProfile
+|       ↓
+|     Section
 |
 |--------------------------------------------------------------------------
 */
 
 use App\Http\Controllers\Controller;
+use App\Models\AccessProfile;
 use App\Models\User;
+use App\Models\UserProfile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -48,10 +52,7 @@ class UserController extends Controller
      *
      * GET /api/users
      *
-     * Devuelve todos los usuarios registrados.
-     *
-     * La contraseña se encuentra protegida mediante el modelo
-     * User y nunca se devuelve en la respuesta JSON.
+     * Devuelve los usuarios junto con sus perfiles de autorización.
      */
     public function index(): JsonResponse
     {
@@ -59,11 +60,27 @@ class UserController extends Controller
             ->latest()
             ->get();
 
+        /*
+        |--------------------------------------------------------------------------
+        | AGREGAR PERFILES A CADA USUARIO
+        |--------------------------------------------------------------------------
+        */
+
+        $users->each(function ($user) {
+
+            $user->setAttribute(
+                'profiles',
+                $this->getUserProfiles($user)
+            );
+
+        });
+
         return response()->json([
             'message' => 'Usuarios obtenidos correctamente.',
             'data' => $users,
         ], 200);
     }
+
 
     /**
      * ============================================================
@@ -73,17 +90,17 @@ class UserController extends Controller
      * POST /api/users
      *
      * Content-Type:
-     * multipart/form-data
+     *
+     *     multipart/form-data
      *
      * Campos:
      *
-     * name
-     * email
-     * phone
-     * password
-     * profile_photo
-     *
-     * El código del usuario se genera automáticamente.
+     *     name
+     *     email
+     *     phone
+     *     password
+     *     profile_photo
+     *     profile_ids[]
      */
     public function store(Request $request): JsonResponse
     {
@@ -94,6 +111,7 @@ class UserController extends Controller
         */
 
         $validated = $request->validate([
+
             'name' => [
                 'required',
                 'string',
@@ -124,112 +142,219 @@ class UserController extends Controller
                 'mimes:jpg,jpeg,png,webp',
                 'max:2048',
             ],
+
+            /*
+            |--------------------------------------------------------------------------
+            | PERFILES
+            |--------------------------------------------------------------------------
+            |
+            | El usuario debe recibir al menos un perfil.
+            |
+            */
+
+            'profile_ids' => [
+                'required',
+                'array',
+                'min:1',
+            ],
+
+            'profile_ids.*' => [
+                'required',
+                'string',
+            ],
+
         ]);
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | VALIDAR QUE LOS PERFILES EXISTAN
+        |--------------------------------------------------------------------------
+        */
+
+        $profileIds =
+            collect(
+                $validated['profile_ids']
+            )
+            ->map(
+                fn ($id) => (string) $id
+            )
+            ->unique()
+            ->values();
+
+
+        $validProfileCount =
+            AccessProfile::query()
+                ->whereIn(
+                    '_id',
+                    $profileIds->all()
+                )
+                ->count();
+
+
+        if (
+            $validProfileCount !==
+            $profileIds->count()
+        ) {
+
+            return response()->json([
+
+                'message' =>
+                    'Uno o más perfiles de autorización no existen.',
+
+            ], 422);
+
+        }
+
 
         /*
         |--------------------------------------------------------------------------
         | EMAIL ÚNICO
         |--------------------------------------------------------------------------
-        |
-        | MongoDB no utiliza aquí una migración SQL tradicional.
-        | Por eso hacemos la comprobación directamente mediante
-        | el modelo User.
-        |
         */
 
-        if (User::where('email', $validated['email'])->exists()) {
+        if (
+            User::where(
+                'email',
+                $validated['email']
+            )->exists()
+        ) {
+
             return response()->json([
-                'message' => 'El correo electrónico ya está registrado.',
+
+                'message' =>
+                    'El correo electrónico ya está registrado.',
+
                 'errors' => [
+
                     'email' => [
+
                         'El correo electrónico ya está registrado.',
+
                     ],
+
                 ],
+
             ], 422);
         }
 
+
         /*
         |--------------------------------------------------------------------------
-        | GENERACIÓN DEL CÓDIGO
+        | GENERAR CÓDIGO
         |--------------------------------------------------------------------------
-        |
-        | El código NO viene del frontend.
-        |
-        | Se genera automáticamente en el backend.
-        |
-        | Ejemplo:
-        |
-        | USR-000001
-        | USR-000002
-        |
         */
 
-        $lastUser = User::query()
-            ->orderBy('created_at', 'desc')
-            ->first();
+        $lastUser =
+            User::query()
+                ->orderBy(
+                    'created_at',
+                    'desc'
+                )
+                ->first();
+
 
         $nextNumber = 1;
 
-        if ($lastUser && ! empty($lastUser->code)) {
-            $lastNumber = (int) str_replace(
-                'USR-',
-                '',
-                $lastUser->code
-            );
 
-            $nextNumber = $lastNumber + 1;
+        if (
+            $lastUser &&
+            ! empty($lastUser->code)
+        ) {
+
+            $lastNumber =
+                (int) str_replace(
+                    'USR-',
+                    '',
+                    $lastUser->code
+                );
+
+
+            $nextNumber =
+                $lastNumber + 1;
         }
 
-        $code = 'USR-'.str_pad(
-            (string) $nextNumber,
-            6,
-            '0',
-            STR_PAD_LEFT
+
+        $code =
+            'USR-' .
+            str_pad(
+                (string) $nextNumber,
+                6,
+                '0',
+                STR_PAD_LEFT
+            );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | GUARDAR FOTO
+        |--------------------------------------------------------------------------
+        */
+
+        $profilePhotoPath =
+            $request
+                ->file('profile_photo')
+                ->store(
+                    'profile-photos',
+                    'public'
+                );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | CREAR USUARIO
+        |--------------------------------------------------------------------------
+        */
+
+        $user =
+            User::create([
+
+                'code' =>
+                    $code,
+
+                'name' =>
+                    $validated['name'],
+
+                'email' =>
+                    $validated['email'],
+
+                'phone' =>
+                    $validated['phone'] ?? null,
+
+                'profile_photo' =>
+                    $profilePhotoPath,
+
+                'password' =>
+                    Hash::make(
+                        $validated['password']
+                    ),
+
+            ]);
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | ASIGNAR PERFILES
+        |--------------------------------------------------------------------------
+        */
+
+        $this->syncUserProfiles(
+            $user,
+            $profileIds->all()
         );
 
-        /*
-        |--------------------------------------------------------------------------
-        | FOTO DE PERFIL
-        |--------------------------------------------------------------------------
-        |
-        | Guardamos el archivo en:
-        |
-        | storage/app/public/profile-photos
-        |
-        | El método store() genera un nombre único.
-        |
-        */
-
-        $profilePhotoPath = $request
-            ->file('profile_photo')
-            ->store('profile-photos', 'public');
 
         /*
         |--------------------------------------------------------------------------
-        | CREACIÓN DEL USUARIO
+        | AGREGAR PERFILES A LA RESPUESTA
         |--------------------------------------------------------------------------
         */
 
-        $user = User::create([
-            'code' => $code,
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'phone' => $validated['phone'] ?? null,
-            'profile_photo' => $profilePhotoPath,
+        $user->setAttribute(
+            'profiles',
+            $this->getUserProfiles($user)
+        );
 
-            /*
-            |--------------------------------------------------------------------------
-            | SEGURIDAD
-            |--------------------------------------------------------------------------
-            |
-            | Nunca almacenamos la contraseña en texto plano.
-            |
-            */
-
-            'password' => Hash::make(
-                $validated['password']
-            ),
-        ]);
 
         /*
         |--------------------------------------------------------------------------
@@ -238,10 +363,16 @@ class UserController extends Controller
         */
 
         return response()->json([
-            'message' => 'Usuario creado correctamente.',
-            'data' => $user,
+
+            'message' =>
+                'Usuario creado correctamente.',
+
+            'data' =>
+                $user,
+
         ], 201);
     }
+
 
     /**
      * ============================================================
@@ -250,15 +381,31 @@ class UserController extends Controller
      *
      * GET /api/users/{id}
      */
-    public function show(string $id): JsonResponse
-    {
-        $user = User::findOrFail($id);
+    public function show(
+        string $id
+    ): JsonResponse {
+
+        $user =
+            User::findOrFail($id);
+
+
+        $user->setAttribute(
+            'profiles',
+            $this->getUserProfiles($user)
+        );
+
 
         return response()->json([
-            'message' => 'Usuario obtenido correctamente.',
-            'data' => $user,
+
+            'message' =>
+                'Usuario obtenido correctamente.',
+
+            'data' =>
+                $user,
+
         ], 200);
     }
+
 
     /**
      * ============================================================
@@ -267,78 +414,168 @@ class UserController extends Controller
      *
      * PUT /api/users/{id}
      *
-     * La contraseña es opcional durante la actualización.
+     * profile_ids[] reemplaza las asignaciones anteriores.
      */
-    public function update(Request $request, string $id): JsonResponse
-    {
-        $user = User::findOrFail($id);
+    public function update(
+        Request $request,
+        string $id
+    ): JsonResponse {
 
-        $validated = $request->validate([
-            'name' => [
-                'required',
-                'string',
-                'max:255',
-            ],
+        $user =
+            User::findOrFail($id);
 
-            'email' => [
-                'required',
-                'email',
-                'max:255',
-            ],
-
-            'phone' => [
-                'nullable',
-                'string',
-                'regex:/^\+[1-9]\d{7,14}$/',
-            ],
-
-            'password' => [
-                'nullable',
-                'string',
-                'min:8',
-            ],
-
-            'profile_photo' => [
-                'nullable',
-                'image',
-                'mimes:jpg,jpeg,png,webp',
-                'max:2048',
-            ],
-        ]);
 
         /*
         |--------------------------------------------------------------------------
-        | VALIDAR EMAIL ÚNICO
+        | VALIDACIÓN
         |--------------------------------------------------------------------------
         */
 
-        $existingUser = User::where(
-            'email',
-            $validated['email']
-        )
-            ->where('_id', '!=', $user->getKey())
+        $validated =
+            $request->validate([
+
+                'name' => [
+                    'required',
+                    'string',
+                    'max:255',
+                ],
+
+                'email' => [
+                    'required',
+                    'email',
+                    'max:255',
+                ],
+
+                'phone' => [
+                    'nullable',
+                    'string',
+                    'regex:/^\+[1-9]\d{7,14}$/',
+                ],
+
+                'password' => [
+                    'nullable',
+                    'string',
+                    'min:8',
+                ],
+
+                'profile_photo' => [
+                    'nullable',
+                    'image',
+                    'mimes:jpg,jpeg,png,webp',
+                    'max:2048',
+                ],
+
+                'profile_ids' => [
+                    'required',
+                    'array',
+                    'min:1',
+                ],
+
+                'profile_ids.*' => [
+                    'required',
+                    'string',
+                ],
+
+            ]);
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | PERFILES
+        |--------------------------------------------------------------------------
+        */
+
+        $profileIds =
+            collect(
+                $validated['profile_ids']
+            )
+            ->map(
+                fn ($profileId) =>
+                    (string) $profileId
+            )
+            ->unique()
+            ->values();
+
+
+        $validProfileCount =
+            AccessProfile::query()
+                ->whereIn(
+                    '_id',
+                    $profileIds->all()
+                )
+                ->count();
+
+
+        if (
+            $validProfileCount !==
+            $profileIds->count()
+        ) {
+
+            return response()->json([
+
+                'message' =>
+                    'Uno o más perfiles de autorización no existen.',
+
+            ], 422);
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | EMAIL ÚNICO
+        |--------------------------------------------------------------------------
+        */
+
+        $existingUser =
+            User::where(
+                'email',
+                $validated['email']
+            )
+            ->where(
+                '_id',
+                '!=',
+                $user->getKey()
+            )
             ->first();
 
+
         if ($existingUser) {
+
             return response()->json([
-                'message' => 'El correo electrónico ya está registrado.',
+
+                'message' =>
+                    'El correo electrónico ya está registrado.',
+
                 'errors' => [
+
                     'email' => [
+
                         'El correo electrónico ya está registrado.',
+
                     ],
+
                 ],
+
             ], 422);
         }
 
+
         /*
         |--------------------------------------------------------------------------
-        | DATOS ACTUALIZABLES
+        | ACTUALIZAR DATOS
         |--------------------------------------------------------------------------
         */
 
-        $user->name = $validated['name'];
-        $user->email = $validated['email'];
-        $user->phone = $validated['phone'] ?? null;
+        $user->name =
+            $validated['name'];
+
+        $user->email =
+            $validated['email'];
+
+        $user->phone =
+            $validated['phone'] ?? null;
+
 
         /*
         |--------------------------------------------------------------------------
@@ -346,11 +583,18 @@ class UserController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        if (! empty($validated['password'])) {
-            $user->password = Hash::make(
+        if (
+            ! empty(
                 $validated['password']
-            );
+            )
+        ) {
+
+            $user->password =
+                Hash::make(
+                    $validated['password']
+                );
         }
+
 
         /*
         |--------------------------------------------------------------------------
@@ -358,29 +602,91 @@ class UserController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        if ($request->hasFile('profile_photo')) {
-            /*
-            | Eliminamos la fotografía anterior cuando existe.
-            */
+        if (
+            $request->hasFile(
+                'profile_photo'
+            )
+        ) {
 
-            if (! empty($user->profile_photo)) {
-                Storage::disk('public')->delete(
+            if (
+                ! empty(
+                    $user->profile_photo
+                )
+            ) {
+
+                Storage::disk(
+                    'public'
+                )->delete(
                     $user->profile_photo
                 );
             }
 
-            $user->profile_photo = $request
-                ->file('profile_photo')
-                ->store('profile-photos', 'public');
+
+            $user->profile_photo =
+                $request
+                    ->file(
+                        'profile_photo'
+                    )
+                    ->store(
+                        'profile-photos',
+                        'public'
+                    );
         }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | GUARDAR USUARIO
+        |--------------------------------------------------------------------------
+        */
 
         $user->save();
 
+
+        /*
+        |--------------------------------------------------------------------------
+        | ACTUALIZAR PERFILES
+        |--------------------------------------------------------------------------
+        |
+        | La operación reemplaza las asignaciones anteriores.
+        |
+        */
+
+        $this->syncUserProfiles(
+            $user,
+            $profileIds->all()
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | RECARGAR PERFILES
+        |--------------------------------------------------------------------------
+        */
+
+        $user->setAttribute(
+            'profiles',
+            $this->getUserProfiles($user)
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | RESPUESTA
+        |--------------------------------------------------------------------------
+        */
+
         return response()->json([
-            'message' => 'Usuario actualizado correctamente.',
-            'data' => $user,
+
+            'message' =>
+                'Usuario actualizado correctamente.',
+
+            'data' =>
+                $user,
+
         ], 200);
     }
+
 
     /**
      * ============================================================
@@ -389,9 +695,13 @@ class UserController extends Controller
      *
      * DELETE /api/users/{id}
      */
-    public function destroy(string $id): JsonResponse
-    {
-        $user = User::findOrFail($id);
+    public function destroy(
+        string $id
+    ): JsonResponse {
+
+        $user =
+            User::findOrFail($id);
+
 
         /*
         |--------------------------------------------------------------------------
@@ -399,11 +709,30 @@ class UserController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        if (! empty($user->profile_photo)) {
-            Storage::disk('public')->delete(
+        if (
+            ! empty(
+                $user->profile_photo
+            )
+        ) {
+
+            Storage::disk(
+                'public'
+            )->delete(
                 $user->profile_photo
             );
         }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | ELIMINAR PERFILES RELACIONADOS
+        |--------------------------------------------------------------------------
+        */
+
+        $user
+            ->userProfiles()
+            ->delete();
+
 
         /*
         |--------------------------------------------------------------------------
@@ -413,8 +742,125 @@ class UserController extends Controller
 
         $user->delete();
 
+
         return response()->json([
-            'message' => 'Usuario eliminado correctamente.',
+
+            'message' =>
+                'Usuario eliminado correctamente.',
+
         ], 200);
+    }
+
+
+    /**
+     * ============================================================
+     * OBTENER PERFILES DEL USUARIO
+     * ============================================================
+     *
+     * Convierte user_profiles en una estructura sencilla para
+     * Angular.
+     *
+     * Resultado:
+     *
+     * [
+     *     {
+     *         id,
+     *         code,
+     *         name,
+     *         description
+     *     }
+     * ]
+     */
+    private function getUserProfiles(
+        User $user
+    ): array {
+
+        return $user
+            ->userProfiles()
+            ->with('accessProfile')
+            ->get()
+            ->map(
+                function ($userProfile) {
+
+                    $profile =
+                        $userProfile->accessProfile;
+
+                    if (! $profile) {
+
+                        return null;
+                    }
+
+
+                    return [
+
+                        'id' =>
+                            (string)
+                            $profile->getKey(),
+
+                        'code' =>
+                            $profile->code,
+
+                        'name' =>
+                            $profile->name,
+
+                        'description' =>
+                            $profile->description,
+
+                    ];
+                }
+            )
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+
+    /**
+     * ============================================================
+     * SINCRONIZAR PERFILES
+     * ============================================================
+     *
+     * Elimina las relaciones actuales y crea las nuevas.
+     *
+     * Esto permite:
+     *
+     * - Asignar perfiles al crear.
+     * - Cambiar perfiles al editar.
+     * - Asignar uno o varios perfiles.
+     */
+    private function syncUserProfiles(
+        User $user,
+        array $profileIds
+    ): void {
+
+        /*
+        |--------------------------------------------------------------------------
+        | ELIMINAR ASIGNACIONES ANTERIORES
+        |--------------------------------------------------------------------------
+        */
+
+        $user
+            ->userProfiles()
+            ->delete();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | CREAR NUEVAS ASIGNACIONES
+        |--------------------------------------------------------------------------
+        */
+
+        foreach ($profileIds as $profileId) {
+
+            UserProfile::create([
+
+                'user_id' =>
+                    $user->getKey(),
+
+                'profile_id' =>
+                    (string) $profileId,
+
+            ]);
+        }
     }
 }

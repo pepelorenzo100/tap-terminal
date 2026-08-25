@@ -10,35 +10,33 @@
  *
  * Responsabilidad:
  *
- * Este componente representa el menú principal de navegación
- * del sistema TAP Terminal.
+ *     Controlar la navegación principal de TAP Terminal.
  *
- * Opciones:
+ * Autorización:
  *
- *     - Productos
- *     - Usuarios
- *     - Cerrar sesión
+ *     El componente consulta AuthService para determinar
+ *     qué secciones puede visualizar el usuario.
  *
- * Arquitectura:
+ * Secciones:
  *
- *     NavbarComponent
- *          |
- *          +----> Angular Router
- *          |
- *          +----> AuthService
- *                         |
- *                         +----> Laravel API
- *
- * Seguridad:
- *
- * La existencia del token se consulta mediante AuthService.
+ *     SEC-PRODUCTS
+ *     SEC-USERS
+ *     SEC-PROFILES
  *
  * IMPORTANTE:
  *
- * Este componente NO sustituye al AuthGuard.
+ *     Este componente solamente controla la visibilidad
+ *     de los enlaces.
  *
- * Las rutas protegidas continúan dependiendo del sistema
- * de autenticación de Angular y Laravel Sanctum.
+ *     NO constituye una medida de seguridad.
+ *
+ * La seguridad real continúa dependiendo de:
+ *
+ *     Angular AuthGuard
+ *     +
+ *     Laravel Sanctum
+ *     +
+ *     autorización del backend
  *
  * ============================================================
  */
@@ -65,16 +63,6 @@ import {
  * ============================================================
  * SERVICIO DE AUTENTICACIÓN
  * ============================================================
- *
- * AuthService se encuentra en:
- *
- *     src/app/services/auth.service.ts
- *
- * Se utiliza para:
- *
- *     - comprobar si existe sesión
- *     - cerrar sesión
- *     - eliminar el token local
  */
 
 import {
@@ -91,7 +79,7 @@ import {
 @Component({
 
   /**
-   * Selector utilizado por Angular.
+   * Selector del componente.
    */
 
   selector: 'app-navbar',
@@ -99,33 +87,18 @@ import {
 
   /**
    * Componente standalone.
-   *
-   * No pertenece a un NgModule tradicional.
    */
 
   standalone: true,
 
 
   /**
-   * Dependencias utilizadas directamente
-   * por navbar.component.html.
+   * Dependencias utilizadas por la plantilla.
    */
 
   imports: [
 
-    /**
-     * Permite utilizar:
-     *
-     * routerLink="/products"
-     * routerLink="/users"
-     */
-
     RouterLink,
-
-
-    /**
-     * Permite marcar visualmente la ruta activa.
-     */
 
     RouterLinkActive
 
@@ -133,7 +106,7 @@ import {
 
 
   /**
-   * Plantilla HTML del menú.
+   * Plantilla.
    */
 
   templateUrl:
@@ -141,7 +114,7 @@ import {
 
 
   /**
-   * Estilos específicos del menú.
+   * Estilos.
    */
 
   styleUrl:
@@ -150,12 +123,6 @@ import {
 })
 
 
-/**
- * ============================================================
- * CLASE NAVBAR COMPONENT
- * ============================================================
- */
-
 export class NavbarComponent {
 
 
@@ -163,14 +130,6 @@ export class NavbarComponent {
    * ==========================================================
    * CONSTRUCTOR
    * ==========================================================
-   *
-   * AuthService:
-   *
-   * Centraliza la autenticación de la aplicación.
-   *
-   * Router:
-   *
-   * Permite realizar navegación programática.
    */
 
   constructor(
@@ -186,13 +145,12 @@ export class NavbarComponent {
 
   /**
    * ==========================================================
-   * ESTADO DE AUTENTICACIÓN
+   * AUTENTICACIÓN
    * ==========================================================
    *
-   * Devuelve true cuando existe un token guardado
-   * en localStorage.
+   * Indica si existe un token almacenado localmente.
    *
-   * El token es administrado por AuthService.
+   * La validez real del token la determina Laravel Sanctum.
    */
 
   get isAuthenticated(): boolean {
@@ -205,13 +163,74 @@ export class NavbarComponent {
 
   /**
    * ==========================================================
+   * ACCESO A PRODUCTOS
+   * ==========================================================
+   *
+   * Sección:
+   *
+   *     SEC-PRODUCTS
+   *
+   * Si el usuario posee esta sección se muestra
+   * el enlace Productos.
+   */
+
+  get canAccessProducts(): boolean {
+
+    return this.authService
+      .hasSection('SEC-PRODUCTS');
+
+  }
+
+
+  /**
+   * ==========================================================
+   * ACCESO A USUARIOS
+   * ==========================================================
+   *
+   * Sección:
+   *
+   *     SEC-USERS
+   *
+   * Si el usuario posee esta sección se muestra
+   * el enlace Usuarios.
+   */
+
+  get canAccessUsers(): boolean {
+
+    return this.authService
+      .hasSection('SEC-USERS');
+
+  }
+
+
+  /**
+   * ==========================================================
+   * ACCESO A PERFILES DE AUTORIZACIÓN
+   * ==========================================================
+   *
+   * Sección:
+   *
+   *     SEC-PROFILES
+   *
+   * Si el usuario posee esta sección se muestra
+   * el enlace Perfiles.
+   */
+
+  get canAccessProfiles(): boolean {
+
+    return this.authService
+      .hasSection('SEC-PROFILES');
+
+  }
+
+
+  /**
+   * ==========================================================
    * CERRAR SESIÓN
    * ==========================================================
    *
    * Flujo:
    *
-   *     Usuario
-   *        ↓
    *     Navbar
    *        ↓
    *     AuthService.logout()
@@ -220,21 +239,12 @@ export class NavbarComponent {
    *        ↓
    *     Laravel Sanctum
    *        ↓
-   *     eliminar token local
+   *     revocar token
+   *        ↓
+   *     limpiar estado Angular
    *        ↓
    *     /login
    *
-   * Si el servidor responde correctamente:
-   *
-   *     1. Eliminamos el token.
-   *     2. Redirigimos al login.
-   *
-   * Si ocurre un error:
-   *
-   *     También eliminamos el token local.
-   *
-   * Esto evita que el navegador conserve una sesión
-   * que ya no es válida en Laravel.
    */
 
   logout(): void {
@@ -244,24 +254,23 @@ export class NavbarComponent {
       .subscribe({
 
         /**
-         * ================================================
+         * ====================================================
          * LOGOUT CORRECTO
-         * ================================================
+         * ====================================================
          */
 
         next: () => {
 
-          /**
-           * Eliminar token almacenado.
-           */
-
-          this.authService
-            .clearToken();
-
-
-          /**
-           * Regresar a la pantalla de login.
-           */
+          /*
+          |--------------------------------------------------------------------------
+          | AuthService ya limpia:
+          |
+          | - token
+          | - usuario
+          | - perfiles
+          | - secciones
+          |--------------------------------------------------------------------------
+          */
 
           this.router
             .navigate([
@@ -272,17 +281,15 @@ export class NavbarComponent {
 
 
         /**
-         * ================================================
+         * ====================================================
          * ERROR DURANTE LOGOUT
-         * ================================================
+         * ====================================================
+         *
+         * Aunque Laravel no responda correctamente,
+         * eliminamos la sesión local.
          */
 
         error: (error: unknown) => {
-
-          /**
-           * Mostrar el error en consola para facilitar
-           * diagnóstico durante desarrollo.
-           */
 
           console.error(
             'Error al cerrar sesión:',
@@ -290,18 +297,21 @@ export class NavbarComponent {
           );
 
 
-          /**
-           * Aunque Laravel haya fallado, eliminamos
-           * el token local.
-           */
+          /*
+          |--------------------------------------------------------------------------
+          | LIMPIAR ESTADO LOCAL
+          |--------------------------------------------------------------------------
+          */
 
           this.authService
-            .clearToken();
+            .clearAuthenticationState();
 
 
-          /**
-           * Regresar al login.
-           */
+          /*
+          |--------------------------------------------------------------------------
+          | VOLVER AL LOGIN
+          |--------------------------------------------------------------------------
+          */
 
           this.router
             .navigate([

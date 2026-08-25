@@ -1,403 +1,433 @@
-/**
- * ============================================================
- * TAP TERMINAL
- * MÓDULO DE ADMINISTRACIÓN DE PRODUCTOS
- * ============================================================
- *
- * Archivo:
- * products.component.ts
- *
- * Responsabilidades:
- *
- * 1. Cargar productos.
- * 2. Crear productos.
- * 3. Editar productos.
- * 4. Consultar productos.
- * 5. Eliminar productos.
- * 6. Exportar Excel.
- * 7. Exportar PDF.
- * 8. Mostrar mensajes.
- * 9. Cerrar sesión.
- *
- * ============================================================
- */
+/*
+|--------------------------------------------------------------------------
+| TAP TERMINAL - PRODUCTS COMPONENT
+|--------------------------------------------------------------------------
+|
+| Archivo:
+|   frontend/src/app/pages/products/products.component.ts
+|
+| Responsabilidad:
+|
+|   Administrar la pantalla de consulta de productos.
+|
+| Funcionalidades:
+|
+|   - Consultar productos.
+|   - Crear productos.
+|   - Editar productos.
+|   - Visualizar el detalle de un producto.
+|   - Eliminar productos.
+|   - Exportar productos a Excel.
+|   - Exportar productos a PDF.
+|   - Mostrar mensajes de operación.
+|
+| Seguridad:
+|
+|   El cierre de sesión NO pertenece a este componente.
+|   La sesión se administra de forma centralizada mediante
+|   NavbarComponent y AuthService.
+|
+| Arquitectura:
+|
+|   ProductsComponent
+|        ↓
+|   ProductService
+|        ↓
+|   HTTP
+|        ↓
+|   Laravel API
+|        ↓
+|   MongoDB
+|
+|--------------------------------------------------------------------------
+*/
 
-import {
-  Component,
-  OnInit
-} from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Component, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 
-
-import {
-  CommonModule
-} from '@angular/common';
-
-
-import {
-  FormsModule
-} from '@angular/forms';
-
-
-import {
-  Router
-} from '@angular/router';
-
-
-import {
-  ProductService
-} from '../../services/product.service';
-
-
-import {
-  AuthService
-} from '../../services/auth.service';
-
+import { ProductService } from '../../services/product.service';
 
 import {
   Product,
   ProductRequest
 } from '../../models/product';
 
-
 import * as XLSX from 'xlsx';
 
-
 import jsPDF from 'jspdf';
-
 
 import autoTable from 'jspdf-autotable';
 
 
-/**
- * ============================================================
- * COMPONENTE
- * ============================================================
- */
+/*
+|--------------------------------------------------------------------------
+| COMPONENTE DE PRODUCTOS
+|--------------------------------------------------------------------------
+|
+| Componente standalone utilizado para administrar el catálogo
+| de productos del sistema TAP Terminal.
+|
+|--------------------------------------------------------------------------
+*/
 
 @Component({
+  selector: 'app-products',
 
-  selector:
-    'app-products',
-
-  standalone:
-    true,
+  standalone: true,
 
   imports: [
     CommonModule,
     FormsModule
   ],
 
-  templateUrl:
-    './products.component.html',
+  templateUrl: './products.component.html',
 
-  styleUrl:
-    './products.component.css'
-
+  styleUrl: './products.component.css'
 })
-export class ProductsComponent
-  implements OnInit {
+export class ProductsComponent implements OnInit {
 
-
-  /* ==========================================================
-     PRODUCTOS
-     ========================================================== */
+  /*
+  |--------------------------------------------------------------------------
+  | LISTADO DE PRODUCTOS
+  |--------------------------------------------------------------------------
+  |
+  | Contiene los productos obtenidos desde la API.
+  |
+  */
 
   products: Product[] = [];
 
 
-  /* ==========================================================
-     FORMULARIO
-     ========================================================== */
+  /*
+  |--------------------------------------------------------------------------
+  | ESTADO DEL FORMULARIO
+  |--------------------------------------------------------------------------
+  |
+  | showForm:
+  |   Indica si el formulario de alta/edición está visible.
+  |
+  | editingProductId:
+  |   Identificador del producto que se está editando.
+  |
+  |   null = alta de producto.
+  |
+  */
 
   showForm = false;
 
-
-  editingProductId:
-    string | number | null = null;
+  editingProductId: string | number | null = null;
 
 
-  newProduct:
-    ProductRequest & {
-      code?: string;
-    } = {
+  /*
+  |--------------------------------------------------------------------------
+  | MODELO DEL FORMULARIO
+  |--------------------------------------------------------------------------
+  |
+  | El código no se captura desde el formulario.
+  |
+  | El backend es responsable de generar automáticamente
+  | el código del producto.
+  |
+  */
 
-      name: '',
+  newProduct: ProductRequest & {
+    code?: string;
+  } = {
+    name: '',
+    brand: '',
+    price: 0
+  };
 
-      brand: '',
 
-      price: 0
+  /*
+  |--------------------------------------------------------------------------
+  | MODAL DE DETALLE
+  |--------------------------------------------------------------------------
+  |
+  | selectedProduct:
+  |   Producto actualmente seleccionado.
+  |
+  | showDetailModal:
+  |   Controla la visibilidad del modal.
+  |
+  */
 
-    };
-
-
-  /* ==========================================================
-     MODAL
-     ========================================================== */
-
-  selectedProduct:
-    Product | null = null;
-
+  selectedProduct: Product | null = null;
 
   showDetailModal = false;
 
 
-  /* ==========================================================
-     MENSAJES
-     ========================================================== */
+  /*
+  |--------------------------------------------------------------------------
+  | MENSAJES DE LA INTERFAZ
+  |--------------------------------------------------------------------------
+  |
+  | Permiten informar al usuario el resultado de las operaciones.
+  |
+  */
 
   message = '';
 
-
-  messageType:
-    'success' |
-    'error' |
-    'info' = 'info';
+  messageType: 'success' | 'error' | 'info' = 'info';
 
 
-  /* ==========================================================
-     CONSTRUCTOR
-     ========================================================== */
+  /*
+  |--------------------------------------------------------------------------
+  | CONSTRUCTOR
+  |--------------------------------------------------------------------------
+  |
+  | ProductService:
+  |   Encargado de comunicarse con la API de productos.
+  |
+  | IMPORTANTE:
+  |
+  | AuthService y Router no se utilizan aquí.
+  |
+  | El cierre de sesión está centralizado en NavbarComponent,
+  | evitando duplicar responsabilidades y botones.
+  |
+  */
 
   constructor(
-
-    private readonly productService:
-      ProductService,
-
-    private readonly authService:
-      AuthService,
-
-    private readonly router:
-      Router
-
+    private readonly productService: ProductService
   ) {}
 
 
-  /* ==========================================================
-     INICIALIZACIÓN
-     ========================================================== */
+  /*
+  |--------------------------------------------------------------------------
+  | INICIALIZACIÓN
+  |--------------------------------------------------------------------------
+  |
+  | Al cargar la pantalla se consulta el listado de productos.
+  |
+  */
 
   ngOnInit(): void {
-
     this.loadProducts();
-
   }
 
 
-  /* ==========================================================
-     CARGAR PRODUCTOS
-     ========================================================== */
+  /*
+  |--------------------------------------------------------------------------
+  | CARGAR PRODUCTOS
+  |--------------------------------------------------------------------------
+  |
+  | GET /api/products
+  |
+  | Solicita al backend el listado actualizado de productos.
+  |
+  */
 
   loadProducts(): void {
-
     this.productService
       .getProducts()
       .subscribe({
+        next: (products: Product[]) => {
+          this.products = products;
+        },
 
-        next:
-          (products: Product[]) => {
+        error: (error: unknown) => {
+          console.error(
+            'Error al cargar productos:',
+            error
+          );
 
-            this.products =
-              products;
-
-          },
-
-        error:
-          (error: unknown) => {
-
-            console.error(
-              'Error al cargar productos:',
-              error
-            );
-
-            this.showMessage(
-              'error',
-              'No fue posible cargar los productos.'
-            );
-
-          }
-
+          this.showMessage(
+            'error',
+            'No fue posible cargar los productos.'
+          );
+        }
       });
-
   }
 
 
-  /* ==========================================================
-     CREAR
-     ========================================================== */
+  /*
+  |--------------------------------------------------------------------------
+  | MOSTRAR FORMULARIO DE ALTA
+  |--------------------------------------------------------------------------
+  |
+  | Prepara el formulario para registrar un nuevo producto.
+  |
+  */
 
   showCreateForm(): void {
-
-    this.editingProductId =
-      null;
-
+    this.editingProductId = null;
 
     this.newProduct = {
-
       name: '',
-
       brand: '',
-
       price: 0
-
     };
 
-
-    this.showForm =
-      true;
-
+    this.showForm = true;
 
     this.clearMessage();
-
   }
 
 
-  /* ==========================================================
-     GUARDAR
-     ========================================================== */
+  /*
+  |--------------------------------------------------------------------------
+  | GUARDAR PRODUCTO
+  |--------------------------------------------------------------------------
+  |
+  | Determina si la operación corresponde a:
+  |
+  |   - Alta.
+  |   - Edición.
+  |
+  | Validaciones:
+  |
+  |   - Nombre obligatorio.
+  |   - Marca obligatoria.
+  |   - Precio numérico.
+  |   - Precio entre 0 y 999.99.
+  |
+  | El código y la fecha de creación son responsabilidad
+  | del backend.
+  |
+  */
 
   saveProduct(): void {
 
-    const name =
-      String(
-        this.newProduct.name ?? ''
-      ).trim();
+    /*
+    |--------------------------------------------------------------------------
+    | VALIDAR NOMBRE
+    |--------------------------------------------------------------------------
+    */
 
+    const name = String(
+      this.newProduct.name ?? ''
+    ).trim();
 
     if (!name) {
-
       this.showMessage(
         'error',
         'El nombre del producto es obligatorio.'
       );
 
       return;
-
     }
 
 
-    const brand =
-      String(
-        this.newProduct.brand ?? ''
-      ).trim();
+    /*
+    |--------------------------------------------------------------------------
+    | VALIDAR MARCA
+    |--------------------------------------------------------------------------
+    */
 
+    const brand = String(
+      this.newProduct.brand ?? ''
+    ).trim();
 
     if (!brand) {
-
       this.showMessage(
         'error',
         'La marca del producto es obligatoria.'
       );
 
       return;
-
     }
 
 
-    const price =
-      Number(
-        this.newProduct.price
-      );
+    /*
+    |--------------------------------------------------------------------------
+    | VALIDAR PRECIO
+    |--------------------------------------------------------------------------
+    |
+    | El examen establece un máximo de tres dígitos para el precio.
+    |
+    | Se permite trabajar con decimales hasta 999.99.
+    |
+    */
 
+    const price = Number(
+      this.newProduct.price
+    );
 
     if (
-
       !Number.isFinite(price) ||
-
       price < 0 ||
-
       price > 999.99
-
     ) {
-
       this.showMessage(
         'error',
         'El precio debe estar entre 0 y 999.99.'
       );
 
       return;
-
     }
 
 
-    const request:
-      ProductRequest = {
+    /*
+    |--------------------------------------------------------------------------
+    | PREPARAR REQUEST
+    |--------------------------------------------------------------------------
+    */
 
-        name,
-
-        brand,
-
-        price
-
-      };
+    const request: ProductRequest = {
+      name,
+      brand,
+      price
+    };
 
 
-    /* ========================================================
-       CREAR
-       ======================================================== */
+    /*
+    |--------------------------------------------------------------------------
+    | CREAR PRODUCTO
+    |--------------------------------------------------------------------------
+    |
+    | Cuando editingProductId es null se realiza una operación
+    | de creación.
+    |
+    */
 
-    if (
-      this.editingProductId === null
-    ) {
+    if (this.editingProductId === null) {
 
       this.productService
         .createProduct(request)
         .subscribe({
+          next: (product: Product) => {
 
-          next:
-            (product: Product) => {
+            this.products = [
+              ...this.products,
+              product
+            ];
 
-              this.products = [
+            this.showMessage(
+              'success',
+              'Producto creado correctamente.'
+            );
 
-                ...this.products,
+            this.resetForm();
+          },
 
-                product
+          error: (error: unknown) => {
+            console.error(
+              'Error al crear producto:',
+              error
+            );
 
-              ];
-
-
-              this.showMessage(
-                'success',
-                'Producto creado correctamente.'
-              );
-
-
-              this.resetForm();
-
-            },
-
-
-          error:
-            (error: unknown) => {
-
-              console.error(
-                'Error al crear producto:',
-                error
-              );
-
-              this.showMessage(
-                'error',
-                'No fue posible crear el producto.'
-              );
-
-            }
-
+            this.showMessage(
+              'error',
+              'No fue posible crear el producto.'
+            );
+          }
         });
 
-
       return;
-
     }
 
 
-    /* ========================================================
-       ACTUALIZAR
-       ======================================================== */
+    /*
+    |--------------------------------------------------------------------------
+    | ACTUALIZAR PRODUCTO
+    |--------------------------------------------------------------------------
+    */
 
-    const productId =
-      String(
-        this.editingProductId
-      );
-
+    const productId = String(
+      this.editingProductId
+    );
 
     this.productService
       .updateProduct(
@@ -405,479 +435,384 @@ export class ProductsComponent
         request
       )
       .subscribe({
+        next: (updatedProduct: Product) => {
 
-        next:
-          (updatedProduct: Product) => {
+          this.products = this.products.map(
+            (product: Product) => {
 
-            this.products =
-              this.products.map(
-
-                (product: Product) => {
-
-                  const currentId =
-                    String(
-                      product.id ?? ''
-                    );
-
-
-                  if (
-                    currentId === productId
-                  ) {
-
-                    return updatedProduct;
-
-                  }
-
-
-                  return product;
-
-                }
-
+              const currentId = String(
+                product.id ?? ''
               );
 
+              if (currentId === productId) {
+                return updatedProduct;
+              }
 
-            this.showMessage(
-              'success',
-              'Producto actualizado correctamente.'
-            );
+              return product;
+            }
+          );
 
+          this.showMessage(
+            'success',
+            'Producto actualizado correctamente.'
+          );
 
-            this.resetForm();
+          this.resetForm();
+        },
 
-          },
+        error: (error: unknown) => {
+          console.error(
+            'Error al actualizar producto:',
+            error
+          );
 
-
-        error:
-          (error: unknown) => {
-
-            console.error(
-              'Error al actualizar producto:',
-              error
-            );
-
-            this.showMessage(
-              'error',
-              'No fue posible actualizar el producto.'
-            );
-
-          }
-
+          this.showMessage(
+            'error',
+            'No fue posible actualizar el producto.'
+          );
+        }
       });
-
   }
 
 
-  /* ==========================================================
-     EDITAR
-     ========================================================== */
+  /*
+  |--------------------------------------------------------------------------
+  | EDITAR PRODUCTO
+  |--------------------------------------------------------------------------
+  |
+  | Carga la información del producto seleccionado dentro
+  | del formulario.
+  |
+  | El código solamente se muestra como referencia.
+  | No se permite modificarlo desde el frontend.
+  |
+  */
 
-  editProduct(
-    product: Product
-  ): void {
+  editProduct(product: Product): void {
 
     this.closeDetailModal();
 
-
     if (
-
       product.id === undefined ||
-
       product.id === null
-
     ) {
-
       this.showMessage(
         'error',
         'El producto no tiene un identificador válido.'
       );
 
       return;
-
     }
 
-
-    this.editingProductId =
-      product.id;
-
+    this.editingProductId = product.id;
 
     this.newProduct = {
+      name: product.name ?? '',
 
-      name:
-        product.name ?? '',
+      brand: product.brand ?? '',
 
-      brand:
-        product.brand ?? '',
+      price: Number(
+        product.price ?? 0
+      ),
 
-      price:
-        Number(
-          product.price ?? 0
-        ),
-
-      code:
-        product.code
-
+      code: product.code
     };
 
-
-    this.showForm =
-      true;
-
+    this.showForm = true;
 
     this.clearMessage();
-
   }
 
 
-  /* ==========================================================
-     VER
-     ========================================================== */
+  /*
+  |--------------------------------------------------------------------------
+  | VISUALIZAR PRODUCTO
+  |--------------------------------------------------------------------------
+  |
+  | Abre el modal con la información del producto seleccionado.
+  |
+  */
 
-  viewProduct(
-    product: Product
-  ): void {
+  viewProduct(product: Product): void {
+    this.selectedProduct = product;
 
-    this.selectedProduct =
-      product;
-
-
-    this.showDetailModal =
-      true;
-
+    this.showDetailModal = true;
   }
 
 
-  /* ==========================================================
-     CERRAR MODAL
-     ========================================================== */
+  /*
+  |--------------------------------------------------------------------------
+  | CERRAR MODAL DE DETALLE
+  |--------------------------------------------------------------------------
+  */
 
   closeDetailModal(): void {
+    this.showDetailModal = false;
 
-    this.showDetailModal =
-      false;
-
-
-    this.selectedProduct =
-      null;
-
+    this.selectedProduct = null;
   }
 
 
-  /* ==========================================================
-     CANCELAR
-     ========================================================== */
+  /*
+  |--------------------------------------------------------------------------
+  | CANCELAR FORMULARIO
+  |--------------------------------------------------------------------------
+  */
 
   cancelCreate(): void {
-
     this.resetForm();
-
   }
 
 
-  /* ==========================================================
-     RESET
-     ========================================================== */
+  /*
+  |--------------------------------------------------------------------------
+  | RESTABLECER FORMULARIO
+  |--------------------------------------------------------------------------
+  |
+  | Limpia el estado del formulario y regresa la pantalla
+  | al modo de consulta.
+  |
+  */
 
   resetForm(): void {
+    this.showForm = false;
 
-    this.showForm =
-      false;
-
-
-    this.editingProductId =
-      null;
-
+    this.editingProductId = null;
 
     this.newProduct = {
-
       name: '',
-
       brand: '',
-
       price: 0
-
     };
-
   }
 
 
-  /* ==========================================================
-     ELIMINAR
-     ========================================================== */
+  /*
+  |--------------------------------------------------------------------------
+  | ELIMINAR PRODUCTO
+  |--------------------------------------------------------------------------
+  |
+  | DELETE /api/products/{id}
+  |
+  | Antes de eliminar se solicita confirmación al usuario.
+  |
+  */
 
-  deleteProduct(
-    product: Product
-  ): void {
+  deleteProduct(product: Product): void {
 
     if (
-
       product.id === undefined ||
-
       product.id === null
-
     ) {
-
       this.showMessage(
         'error',
         'El producto no tiene un identificador válido.'
       );
 
       return;
-
     }
 
 
-    const confirmed =
-      window.confirm(
+    /*
+    |--------------------------------------------------------------------------
+    | CONFIRMACIÓN
+    |--------------------------------------------------------------------------
+    */
 
-        `¿Deseas eliminar el producto "${product.name}"?`
-
-      );
-
+    const confirmed = window.confirm(
+      `¿Deseas eliminar el producto "${product.name}"?`
+    );
 
     if (!confirmed) {
-
       return;
-
     }
 
 
-    const productId =
-      String(
-        product.id
-      );
+    /*
+    |--------------------------------------------------------------------------
+    | IDENTIFICADOR
+    |--------------------------------------------------------------------------
+    */
 
+    const productId = String(
+      product.id
+    );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ELIMINACIÓN
+    |--------------------------------------------------------------------------
+    */
 
     this.productService
       .deleteProduct(productId)
       .subscribe({
+        next: () => {
 
-        next:
-          () => {
+          this.products = this.products.filter(
+            (item: Product) => {
 
-            this.products =
-              this.products.filter(
-
-                (item: Product) => {
-
-                  return String(
-                    item.id
-                  ) !== productId;
-
-                }
-
-              );
-
-
-            if (
-
-              this.selectedProduct &&
-
-              String(
-                this.selectedProduct.id
-              ) === productId
-
-            ) {
-
-              this.closeDetailModal();
+              return String(
+                item.id
+              ) !== productId;
 
             }
+          );
 
 
-            this.showMessage(
-              'success',
-              'Producto eliminado correctamente.'
-            );
+          /*
+          |--------------------------------------------------------------------------
+          | CERRAR MODAL SI EL PRODUCTO ELIMINADO ESTABA SELECCIONADO
+          |--------------------------------------------------------------------------
+          */
 
-          },
-
-
-        error:
-          (error: unknown) => {
-
-            console.error(
-              'Error al eliminar producto:',
-              error
-            );
-
-            this.showMessage(
-              'error',
-              'No fue posible eliminar el producto.'
-            );
-
+          if (
+            this.selectedProduct &&
+            String(
+              this.selectedProduct.id
+            ) === productId
+          ) {
+            this.closeDetailModal();
           }
 
-      });
 
+          this.showMessage(
+            'success',
+            'Producto eliminado correctamente.'
+          );
+        },
+
+        error: (error: unknown) => {
+          console.error(
+            'Error al eliminar producto:',
+            error
+          );
+
+          this.showMessage(
+            'error',
+            'No fue posible eliminar el producto.'
+          );
+        }
+      });
   }
 
 
-  /* ==========================================================
-     MENSAJES
-     ========================================================== */
+  /*
+  |--------------------------------------------------------------------------
+  | MOSTRAR MENSAJE
+  |--------------------------------------------------------------------------
+  */
 
   showMessage(
-
-    type:
-      'success' |
-      'error' |
-      'info',
-
-    message:
-      string
-
+    type: 'success' | 'error' | 'info',
+    message: string
   ): void {
+    this.messageType = type;
 
-    this.messageType =
-      type;
-
-
-    this.message =
-      message;
-
+    this.message = message;
   }
 
+
+  /*
+  |--------------------------------------------------------------------------
+  | LIMPIAR MENSAJE
+  |--------------------------------------------------------------------------
+  */
 
   clearMessage(): void {
-
-    this.message =
-      '';
-
+    this.message = '';
   }
 
 
-  /* ==========================================================
-     LOGOUT
-     ========================================================== */
-
-  logout(): void {
-
-    this.authService
-      .logout()
-      .subscribe({
-
-        next:
-          () => {
-
-            this.authService
-              .clearToken();
-
-
-            this.router
-              .navigate([
-                '/login'
-              ]);
-
-          },
-
-
-        error:
-          (error: unknown) => {
-
-            console.error(
-              'Error al cerrar sesión:',
-              error
-            );
-
-
-            /**
-             * Aunque el backend falle, eliminamos
-             * el token local para evitar dejar al
-             * usuario aparentemente autenticado.
-             */
-            this.authService
-              .clearToken();
-
-
-            this.router
-              .navigate([
-                '/login'
-              ]);
-
-          }
-
-      });
-
-  }
-
-
-  /* ==========================================================
-     EXCEL
-     ========================================================== */
+  /*
+  |--------------------------------------------------------------------------
+  | EXPORTAR A EXCEL
+  |--------------------------------------------------------------------------
+  |
+  | Genera un archivo XLSX con el listado actual de productos.
+  |
+  | La exportación se realiza en el navegador utilizando
+  | la librería SheetJS.
+  |
+  */
 
   exportToExcel(): void {
 
-    if (
-      this.products.length === 0
-    ) {
-
+    if (this.products.length === 0) {
       this.showMessage(
         'info',
         'No existen productos para exportar.'
       );
 
       return;
-
     }
 
 
-    const data =
-      this.products.map(
+    /*
+    |--------------------------------------------------------------------------
+    | PREPARAR DATOS
+    |--------------------------------------------------------------------------
+    */
 
-        (product: Product) => ({
+    const data = this.products.map(
+      (product: Product) => ({
+        Código: product.code ?? '',
 
-          Código:
-            product.code ?? '',
+        Nombre: product.name ?? '',
 
-          Nombre:
-            product.name ?? '',
+        Marca: product.brand ?? '',
 
-          Marca:
-            product.brand ?? '',
+        Precio: Number(
+          product.price ?? 0
+        ),
 
-          Precio:
-            Number(
-              product.price ?? 0
-            ),
+        'Fecha de creación':
+          product.created_at
+            ? new Date(
+                product.created_at
+              ).toLocaleString('es-MX')
+            : ''
+      })
+    );
 
-          'Fecha de creación':
-            product.created_at
-              ? new Date(
-                  product.created_at
-                ).toLocaleString('es-MX')
-              : ''
 
-        })
-
-      );
-
+    /*
+    |--------------------------------------------------------------------------
+    | CREAR HOJA DE CÁLCULO
+    |--------------------------------------------------------------------------
+    */
 
     const worksheet =
-      XLSX.utils.json_to_sheet(
-        data
-      );
+      XLSX.utils.json_to_sheet(data);
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | CREAR LIBRO
+    |--------------------------------------------------------------------------
+    */
 
     const workbook =
       XLSX.utils.book_new();
 
 
     XLSX.utils.book_append_sheet(
-
       workbook,
-
       worksheet,
-
       'Productos'
-
     );
 
 
+    /*
+    |--------------------------------------------------------------------------
+    | DESCARGAR ARCHIVO
+    |--------------------------------------------------------------------------
+    */
+
     XLSX.writeFile(
-
       workbook,
-
       'productos-tap-terminal.xlsx'
-
     );
 
 
@@ -885,38 +820,52 @@ export class ProductsComponent
       'success',
       'Archivo Excel generado correctamente.'
     );
-
   }
 
 
-  /* ==========================================================
-     PDF
-     ========================================================== */
+  /*
+  |--------------------------------------------------------------------------
+  | EXPORTAR A PDF
+  |--------------------------------------------------------------------------
+  |
+  | Genera un documento PDF con:
+  |
+  |   - Código.
+  |   - Nombre.
+  |   - Marca.
+  |   - Precio.
+  |   - Fecha de creación.
+  |
+  */
 
   exportToPDF(): void {
 
-    if (
-      this.products.length === 0
-    ) {
-
+    if (this.products.length === 0) {
       this.showMessage(
         'info',
         'No existen productos para exportar.'
       );
 
       return;
-
     }
 
 
-    const doc =
-      new jsPDF();
+    /*
+    |--------------------------------------------------------------------------
+    | CREAR DOCUMENTO
+    |--------------------------------------------------------------------------
+    */
+
+    const doc = new jsPDF();
 
 
-    doc.setFontSize(
-      18
-    );
+    /*
+    |--------------------------------------------------------------------------
+    | ENCABEZADO
+    |--------------------------------------------------------------------------
+    */
 
+    doc.setFontSize(18);
 
     doc.text(
       'TAP Terminal',
@@ -924,11 +873,7 @@ export class ProductsComponent
       18
     );
 
-
-    doc.setFontSize(
-      11
-    );
-
+    doc.setFontSize(11);
 
     doc.text(
       'Listado de productos',
@@ -936,51 +881,41 @@ export class ProductsComponent
       26
     );
 
-
-    doc.setFontSize(
-      9
-    );
-
+    doc.setFontSize(9);
 
     doc.text(
-
       `Generado: ${new Date().toLocaleString('es-MX')}`,
-
       14,
-
       33
-
     );
 
 
-    const head:
-      string[][] = [
+    /*
+    |--------------------------------------------------------------------------
+    | ENCABEZADOS DE LA TABLA
+    |--------------------------------------------------------------------------
+    */
 
-        [
-
-          'Código',
-
-          'Nombre',
-
-          'Marca',
-
-          'Precio',
-
-          'Fecha de creación'
-
-        ]
-
-      ];
+    const head: string[][] = [
+      [
+        'Código',
+        'Nombre',
+        'Marca',
+        'Precio',
+        'Fecha de creación'
+      ]
+    ];
 
 
-    const body:
-      string[][] =
+    /*
+    |--------------------------------------------------------------------------
+    | INFORMACIÓN DE LA TABLA
+    |--------------------------------------------------------------------------
+    */
 
+    const body: string[][] =
       this.products.map(
-
-        (
-          product: Product
-        ): string[] => [
+        (product: Product): string[] => [
 
           String(
             product.code ?? ''
@@ -999,55 +934,48 @@ export class ProductsComponent
           ).toFixed(2)}`,
 
           product.created_at
-
             ? new Date(
                 product.created_at
               ).toLocaleString('es-MX')
-
             : '—'
-
         ]
-
       );
 
 
+    /*
+    |--------------------------------------------------------------------------
+    | GENERAR TABLA
+    |--------------------------------------------------------------------------
+    */
+
     autoTable(
-
       doc,
-
       {
-
         head,
 
         body,
 
-        startY:
-          40,
+        startY: 40,
 
-        theme:
-          'grid',
+        theme: 'grid',
 
         styles: {
-
-          fontSize:
-            8,
-
-          cellPadding:
-            3
-
+          fontSize: 8,
+          cellPadding: 3
         },
 
         headStyles: {
-
-          fontSize:
-            8
-
+          fontSize: 8
         }
-
       }
-
     );
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | DESCARGAR PDF
+    |--------------------------------------------------------------------------
+    */
 
     doc.save(
       'productos-tap-terminal.pdf'
@@ -1058,7 +986,5 @@ export class ProductsComponent
       'success',
       'Archivo PDF generado correctamente.'
     );
-
   }
-
 }

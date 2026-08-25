@@ -5,98 +5,123 @@
 |
 | Archivo:
 |
-| frontend/src/app/services/user.service.ts
-|
-| Tipo:
-|
-| FRONTEND - Angular / TypeScript
+|     frontend/src/app/services/user.service.ts
 |
 | Responsabilidad:
 |
-| Este servicio centraliza las peticiones HTTP relacionadas
-| con los usuarios del sistema.
+|     Centralizar toda la comunicación HTTP entre Angular y
+|     Laravel para la administración de usuarios.
 |
-| Comunicación:
+| Funcionalidades:
 |
-| Angular
-|    ↓
-| UserService
-|    ↓
-| HttpClient
-|    ↓
-| AuthInterceptor
-|    ↓
-| Authorization: Bearer TOKEN
-|    ↓
-| Laravel API
-|    ↓
-| UserController
-|    ↓
-| User Model
-|    ↓
-| MongoDB
+|     - Listar usuarios.
+|     - Obtener un usuario.
+|     - Crear usuarios.
+|     - Actualizar usuarios.
+|     - Eliminar usuarios.
+|     - Construir URL pública de fotografías.
+|     - Representar los perfiles de autorización asignados.
 |
-|--------------------------------------------------------------------------
-| ENDPOINT PRINCIPAL
-|--------------------------------------------------------------------------
-|
-|     /api/users
-|
-| Operaciones disponibles:
+| API:
 |
 |     GET       /api/users
-|     POST      /api/users
 |     GET       /api/users/{id}
+|     POST      /api/users
 |     PUT/PATCH /api/users/{id}
 |     DELETE    /api/users/{id}
 |
-|--------------------------------------------------------------------------
-| AUTENTICACIÓN
-|--------------------------------------------------------------------------
+| Autenticación:
 |
-| Las rutas de usuarios están protegidas mediante:
+|     AuthInterceptor
+|         ↓
+|     Authorization: Bearer TOKEN
 |
-|     auth:sanctum
+| Backend:
 |
-| Por lo tanto, el AuthInterceptor debe agregar
-| automáticamente el token Bearer a las peticiones.
+|     Laravel
+|         ↓
+|     Sanctum
+|         ↓
+|     MongoDB
+|
+| Fotografías:
+|
+|     Laravel almacena únicamente la ruta relativa:
+|
+|         profile-photos/archivo.jpg
+|
+|     El navegador utiliza:
+|
+|         http://127.0.0.1:8000/storage/profile-photos/archivo.jpg
 |
 |--------------------------------------------------------------------------
 */
 
-import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+
+/*
+|--------------------------------------------------------------------------
+| IMPORTACIONES ANGULAR
+|--------------------------------------------------------------------------
+*/
+
+import {
+  Injectable
+} from '@angular/core';
 
 
 /*
 |--------------------------------------------------------------------------
-| INTERFAZ USER
+| HTTP CLIENT
+|--------------------------------------------------------------------------
+*/
+
+import {
+  HttpClient
+} from '@angular/common/http';
+
+
+/*
+|--------------------------------------------------------------------------
+| RXJS
+|--------------------------------------------------------------------------
+*/
+
+import {
+  Observable
+} from 'rxjs';
+
+
+/*
+|--------------------------------------------------------------------------
+| MODELO DE USUARIO
 |--------------------------------------------------------------------------
 |
-| Representa la información básica de un usuario recibida
-| desde Laravel.
-|
-| No incluimos la contraseña porque nunca debe utilizarse
-| en la respuesta normal de la API.
+| Representa la estructura que Laravel devuelve para un usuario.
 |
 |--------------------------------------------------------------------------
 */
 
 export interface User {
 
+
   /*
   |--------------------------------------------------------------------------
   | IDENTIFICADOR
   |--------------------------------------------------------------------------
+  |
+  | Identificador MongoDB.
+  |
   */
 
   id?: string;
 
+
   /*
   |--------------------------------------------------------------------------
-  | CÓDIGO DEL USUARIO
+  | CÓDIGO
   |--------------------------------------------------------------------------
+  |
+  | Código generado automáticamente por Laravel.
   |
   | Ejemplo:
   |
@@ -106,9 +131,10 @@ export interface User {
 
   code?: string;
 
+
   /*
   |--------------------------------------------------------------------------
-  | DATOS PERSONALES
+  | INFORMACIÓN BÁSICA
   |--------------------------------------------------------------------------
   */
 
@@ -118,16 +144,49 @@ export interface User {
 
   phone?: string | null;
 
+
   /*
   |--------------------------------------------------------------------------
-  | FOTO DE PERFIL
+  | FOTOGRAFÍA DE PERFIL
   |--------------------------------------------------------------------------
   |
-  | Laravel almacena la ruta de la fotografía.
+  | Laravel almacena una ruta relativa.
+  |
+  | Ejemplo:
+  |
+  |     profile-photos/abc123.jpg
   |
   */
 
   profile_photo?: string | null;
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | PERFILES DE AUTORIZACIÓN
+  |--------------------------------------------------------------------------
+  |
+  | El backend agrega esta propiedad mediante:
+  |
+  |     getUserProfiles()
+  |
+  | Ejemplo:
+  |
+  |     [
+  |       {
+  |         id: "...",
+  |         code: "PRF-ADMIN",
+  |         name: "Administrador",
+  |         description: "Acceso completo al sistema."
+  |       }
+  |     ]
+  |
+  | Un usuario puede tener uno o varios perfiles.
+  |
+  */
+
+  profiles?: UserAccessProfile[];
+
 
   /*
   |--------------------------------------------------------------------------
@@ -138,6 +197,65 @@ export interface User {
   created_at?: string;
 
   updated_at?: string;
+
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| PERFIL DE AUTORIZACIÓN ASIGNADO AL USUARIO
+|--------------------------------------------------------------------------
+|
+| Esta estructura corresponde exactamente a la información que
+| UserController::getUserProfiles() prepara para Angular.
+|
+|--------------------------------------------------------------------------
+*/
+
+export interface UserAccessProfile {
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | IDENTIFICADOR DEL PERFIL
+  |--------------------------------------------------------------------------
+  */
+
+  id: string;
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | CÓDIGO DEL PERFIL
+  |--------------------------------------------------------------------------
+  |
+  | Ejemplos:
+  |
+  |     PRF-ADMIN
+  |     PRF-OPERATOR
+  |
+  */
+
+  code: string;
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | NOMBRE
+  |--------------------------------------------------------------------------
+  */
+
+  name: string;
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | DESCRIPCIÓN
+  |--------------------------------------------------------------------------
+  */
+
+  description: string | null;
+
 }
 
 
@@ -146,17 +264,20 @@ export interface User {
 | RESPUESTA DE LA API
 |--------------------------------------------------------------------------
 |
-| UserController devuelve las respuestas utilizando:
+| Laravel utiliza:
 |
-|     message
-|     data
+|     {
+|         message: "...",
+|         data: ...
+|     }
 |
-| Por ejemplo:
+| Dependiendo del endpoint:
 |
-| {
-|     "message": "Usuarios obtenidos correctamente.",
-|     "data": [...]
-| }
+|     data = User
+|
+| o:
+|
+|     data = User[]
 |
 |--------------------------------------------------------------------------
 */
@@ -166,22 +287,26 @@ export interface UserResponse {
   message: string;
 
   data: User | User[];
+
 }
 
 
 /*
 |--------------------------------------------------------------------------
-| USER SERVICE
+| RESPUESTA DE ELIMINACIÓN
 |--------------------------------------------------------------------------
-|
-| Injectable permite que Angular pueda utilizar este servicio
-| mediante inyección de dependencias.
-|
-| providedIn: 'root'
-|
-| significa que Angular crea una única instancia del servicio
-| disponible para toda la aplicación.
-|
+*/
+
+export interface UserDeleteResponse {
+
+  message: string;
+
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| SERVICIO DE USUARIOS
 |--------------------------------------------------------------------------
 */
 
@@ -190,35 +315,37 @@ export interface UserResponse {
 })
 export class UserService {
 
+
   /*
   |--------------------------------------------------------------------------
-  | URL DE LA API
+  | URL BASE DEL BACKEND
   |--------------------------------------------------------------------------
   |
-  | Esta URL apunta al backend Laravel ejecutándose localmente.
-  |
-  | Backend:
+  | Backend Laravel:
   |
   |     http://127.0.0.1:8000
-  |
-  | API:
-  |
-  |     /api/users
   |
   |--------------------------------------------------------------------------
   */
 
+  private readonly apiBaseUrl =
+    'http://127.0.0.1:8000';
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | URL DE LA API DE USUARIOS
+  |--------------------------------------------------------------------------
+  */
+
   private readonly apiUrl =
-    'http://127.0.0.1:8000/api/users';
+    `${this.apiBaseUrl}/api/users`;
 
 
   /*
   |--------------------------------------------------------------------------
   | CONSTRUCTOR
   |--------------------------------------------------------------------------
-  |
-  | Angular proporciona automáticamente HttpClient.
-  |
   */
 
   constructor(
@@ -233,10 +360,11 @@ export class UserService {
   |
   | GET /api/users
   |
-  | Obtiene todos los usuarios registrados.
+  | El backend devuelve todos los usuarios y agrega:
   |
-  | La petición pasa por AuthInterceptor, que debe agregar
-  | el token Bearer cuando exista una sesión autenticada.
+  |     profiles
+  |
+  | a cada usuario.
   |
   |--------------------------------------------------------------------------
   */
@@ -246,26 +374,36 @@ export class UserService {
     return this.http.get<UserResponse>(
       this.apiUrl
     );
+
   }
 
 
   /*
   |--------------------------------------------------------------------------
-  | OBTENER UN USUARIO
+  | OBTENER USUARIO
   |--------------------------------------------------------------------------
   |
   | GET /api/users/{id}
   |
-  | Obtiene un usuario específico mediante su identificador.
+  | El backend devuelve:
+  |
+  |     data.user
+  |
+  | junto con:
+  |
+  |     data.profiles
   |
   |--------------------------------------------------------------------------
   */
 
-  getUser(id: string): Observable<UserResponse> {
+  getUser(
+    id: string
+  ): Observable<UserResponse> {
 
     return this.http.get<UserResponse>(
       `${this.apiUrl}/${id}`
     );
+
   }
 
 
@@ -276,15 +414,24 @@ export class UserService {
   |
   | POST /api/users
   |
-  | IMPORTANTE:
-  |
-  | UserController espera:
+  | Content-Type:
   |
   |     multipart/form-data
   |
-  | porque permite enviar una fotografía de perfil.
+  | El FormData puede contener:
   |
-  | Por eso recibimos FormData y NO JSON.
+  |     name
+  |     email
+  |     phone
+  |     password
+  |     profile_photo
+  |     profile_ids[]
+  |
+  | IMPORTANTE:
+  |
+  | El frontend NO genera el código USR-XXXXXX.
+  |
+  | Laravel lo genera automáticamente.
   |
   |--------------------------------------------------------------------------
   */
@@ -297,6 +444,7 @@ export class UserService {
       this.apiUrl,
       formData
     );
+
   }
 
 
@@ -305,10 +453,26 @@ export class UserService {
   | ACTUALIZAR USUARIO
   |--------------------------------------------------------------------------
   |
-  | PUT /api/users/{id}
+  | POST /api/users/{id}
   |
-  | También utilizamos FormData porque el usuario
-  | puede cambiar su fotografía de perfil.
+  | Se agrega:
+  |
+  |     _method=PUT
+  |
+  | Laravel interpreta la petición como:
+  |
+  |     PUT /api/users/{id}
+  |
+  | El FormData puede contener:
+  |
+  |     name
+  |     email
+  |     phone
+  |     password
+  |     profile_photo
+  |     profile_ids[]
+  |
+  | Los perfiles enviados reemplazan las asignaciones anteriores.
   |
   |--------------------------------------------------------------------------
   */
@@ -318,13 +482,29 @@ export class UserService {
     formData: FormData
   ): Observable<UserResponse> {
 
+    /*
+    |--------------------------------------------------------------------------
+    | MÉTODO HTTP DE LARAVEL
+    |--------------------------------------------------------------------------
+    */
+
+    formData.set(
+      '_method',
+      'PUT'
+    );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | PETICIÓN
+    |--------------------------------------------------------------------------
+    */
+
     return this.http.post<UserResponse>(
       `${this.apiUrl}/${id}`,
-      this.addMethodOverride(
-        formData,
-        'PUT'
-      )
+      formData
     );
+
   }
 
 
@@ -335,47 +515,151 @@ export class UserService {
   |
   | DELETE /api/users/{id}
   |
+  | Laravel elimina:
+  |
+  |     - fotografía;
+  |     - relaciones UserProfile;
+  |     - usuario.
+  |
   |--------------------------------------------------------------------------
   */
 
   deleteUser(
     id: string
-  ): Observable<{ message: string }> {
+  ): Observable<UserDeleteResponse> {
 
-    return this.http.delete<{ message: string }>(
+    return this.http.delete<UserDeleteResponse>(
       `${this.apiUrl}/${id}`
     );
+
   }
 
 
   /*
   |--------------------------------------------------------------------------
-  | METHOD OVERRIDE
+  | OBTENER URL PÚBLICA DE LA FOTOGRAFÍA
   |--------------------------------------------------------------------------
   |
-  | Cuando enviamos archivos mediante multipart/form-data,
-  | algunos clientes y servidores pueden tener problemas
-  | enviando PUT directamente.
+  | Entrada:
   |
-  | Laravel permite utilizar:
+  |     profile-photos/archivo.jpg
   |
-  |     _method=PUT
+  | Resultado:
   |
-  | Por eso agregamos este campo al FormData.
+  |     http://127.0.0.1:8000/storage/profile-photos/archivo.jpg
+  |
+  | También se contemplan:
+  |
+  |     - URL absoluta.
+  |     - Ruta con "/" inicial.
+  |     - Ruta que ya contiene "storage/".
   |
   |--------------------------------------------------------------------------
   */
 
-  private addMethodOverride(
-    formData: FormData,
-    method: 'PUT' | 'PATCH'
-  ): FormData {
+  getProfilePhotoUrl(
+    profilePhoto:
+      string |
+      null |
+      undefined
+  ): string {
 
-    formData.set(
-      '_method',
-      method
-    );
 
-    return formData;
+    /*
+    |--------------------------------------------------------------------------
+    | SIN FOTOGRAFÍA
+    |--------------------------------------------------------------------------
+    */
+
+    if (!profilePhoto) {
+
+      return '';
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | LIMPIAR ESPACIOS
+    |--------------------------------------------------------------------------
+    */
+
+    const photo =
+      profilePhoto.trim();
+
+
+    if (!photo) {
+
+      return '';
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | URL ABSOLUTA
+    |--------------------------------------------------------------------------
+    |
+    | Si Laravel ya devuelve una URL completa,
+    | no debemos modificarla.
+    |
+    */
+
+    if (
+
+      photo.startsWith(
+        'http://'
+      ) ||
+
+      photo.startsWith(
+        'https://'
+      )
+
+    ) {
+
+      return photo;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | NORMALIZAR SLASH INICIAL
+    |--------------------------------------------------------------------------
+    */
+
+    const normalizedPath =
+      photo.replace(
+        /^\/+/,
+        ''
+      );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | RUTA QUE YA CONTIENE STORAGE
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+      normalizedPath.startsWith(
+        'storage/'
+      )
+    ) {
+
+      return `${this.apiBaseUrl}/${normalizedPath}`;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | RUTA NORMAL
+    |--------------------------------------------------------------------------
+    */
+
+    return `${this.apiBaseUrl}/storage/${normalizedPath}`;
+
   }
+
 }

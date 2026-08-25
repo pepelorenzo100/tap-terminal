@@ -1,0 +1,486 @@
+<main class="profile-container">
+
+  <header class="profile-header">
+
+    <div class="profile-header-content">
+
+      <span class="profile-eyebrow">
+        Cuenta
+      </span>
+
+      <h1>
+        Mi perfil
+      </h1>
+
+      <p>
+        Administra tu información personal y de contacto.
+      </p>
+
+    </div>
+
+  </header>
+
+
+  <div
+    *ngIf="message"
+    class="system-message"
+    [class.success]="messageType === 'success'"
+    [class.error]="messageType === 'error'"
+    [class.info]="messageType === 'info'"
+    role="alert"
+  >
+
+    <span
+      class="message-icon"
+      aria-hidden="true"
+    >
+
+      <span *ngIf="messageType === 'success'">
+        ✓
+      </span>
+
+      <span *ngIf="messageType === 'error'">
+        !
+      </span>
+
+      <span *ngIf="messageType === 'info'">
+        i
+      </span>
+
+    </span>
+
+    <span class="message-text">
+      {{ message }}
+    </span>
+
+    <button
+      type="button"
+      class="message-close"
+      (click)="clearMessage()"
+      aria-label="Cerrar mensaje"
+    >
+      ×
+    </button>
+
+  </div>
+
+
+  <section
+    *ngIf="loading"
+    class="profile-card loading-card"
+    aria-live="polite"
+  >
+
+    <div class="loading-spinner"></div>
+
+    <div>
+
+      <h2>
+        Cargando perfil
+      </h2>
+
+      <p>
+        Estamos obteniendo tu información.
+      </p>
+
+    </div>
+
+  </section>
+
+
+  <section
+    *ngIf="!loading"
+    class="profile-card"
+  >
+
+    <div class="profile-card-header profile-account-header">
+
+      <div class="profile-avatar-container">
+
+        <img
+          *ngIf="profilePhotoUrl"
+          class="profile-avatar"
+          [src]="profilePhotoUrl"
+          [alt]="
+            currentUser?.name
+              ? 'Fotografía de ' + currentUser?.name
+              : 'Fotografía de perfil'
+          "
+        />
+
+        <div
+          *ngIf="!profilePhotoUrl"
+          class="profile-avatar profile-avatar-placeholder"
+          aria-label="Sin fotografía de perfil"
+        >
+          {{ currentUser?.name?.charAt(0)?.toUpperCase() || '?' }}
+        </div>
+
+      </div>
+
+
+      <div class="profile-account-info">
+
+        <span class="section-label">
+          Información de cuenta
+        </span>
+
+        <h2>
+          {{ currentUser?.name || 'Usuario' }}
+        </h2>
+
+        <p>
+          {{ currentUser?.email || 'Sin correo electrónico' }}
+        </p>
+
+        <div
+          *ngIf="currentUser?.code"
+          class="profile-user-code"
+        >
+
+          <span>
+            Código
+          </span>
+
+          <strong>
+            {{ currentUser?.code }}
+          </strong>
+
+        </div>
+
+        <div
+          *ngIf="currentUser?.phone"
+          class="profile-user-phone"
+        >
+
+          {{ currentUser?.phone }}
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <form
+      (ngSubmit)="saveProfile()"
+      #profileForm="ngForm"
+      novalidate
+    >
+
+      <div class="form-section">
+
+        <div class="form-section-header">
+
+          <div>
+
+            <h3>
+              Información de contacto
+            </h3>
+
+            <p>
+              Datos utilizados para identificar y contactar contigo.
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div class="form-grid">
+
+          <div class="form-group">
+
+            <label for="profile-phone">
+              Teléfono
+            </label>
+
+            <input
+              id="profile-phone"
+              type="tel"
+              name="phone"
+              [(ngModel)]="profile.phone"
+              placeholder="+52 314 123 4567"
+              autocomplete="tel"
+              maxlength="30"
+            />
+
+            <small class="field-help">
+              Incluye el código de país cuando sea necesario.
+            </small>
+
+          </div>
+
+
+          <div class="form-group form-group-wide">
+
+            <label for="profile-address">
+              Dirección
+            </label>
+
+            <input
+              id="profile-address"
+              type="text"
+              name="address"
+              [(ngModel)]="profile.address"
+              maxlength="255"
+              autocomplete="street-address"
+              placeholder="Calle y número"
+            />
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label for="profile-city">
+              Ciudad
+            </label>
+
+            <input
+              id="profile-city"
+              type="text"
+              name="city"
+              [(ngModel)]="profile.city"
+              maxlength="100"
+              autocomplete="address-level2"
+              placeholder="Ciudad"
+            />
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label for="profile-state">
+              Estado / provincia
+            </label>
+
+            <input
+              id="profile-state"
+              type="text"
+              name="state"
+              [(ngModel)]="profile.state"
+              maxlength="100"
+              autocomplete="address-level1"
+              placeholder="Estado o provincia"
+            />
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label for="profile-country">
+              País
+            </label>
+
+            <input
+              id="profile-country"
+              type="text"
+              name="country"
+              [(ngModel)]="profile.country"
+              maxlength="100"
+              autocomplete="country-name"
+              placeholder="País"
+            />
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label for="profile-postal-code">
+              Código postal
+            </label>
+
+            <input
+              id="profile-postal-code"
+              type="text"
+              name="postal_code"
+              [(ngModel)]="profile.postal_code"
+              maxlength="20"
+              autocomplete="postal-code"
+              placeholder="Código postal"
+            />
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div class="form-section">
+
+        <div class="form-section-header">
+
+          <div>
+
+            <h3>
+              Información personal
+            </h3>
+
+            <p>
+              Información adicional para completar tu perfil.
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div class="form-grid">
+
+          <div class="form-group">
+
+            <label for="profile-birth-date">
+              Fecha de nacimiento
+            </label>
+
+            <input
+              id="profile-birth-date"
+              type="date"
+              name="birth_date"
+              [(ngModel)]="profile.birth_date"
+              autocomplete="bday"
+            />
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label for="profile-gender">
+              Género
+            </label>
+
+            <select
+              id="profile-gender"
+              name="gender"
+              [(ngModel)]="profile.gender"
+            >
+
+              <option value="">
+                Seleccionar
+              </option>
+
+              <option value="Masculino">
+                Masculino
+              </option>
+
+              <option value="Femenino">
+                Femenino
+              </option>
+
+              <option value="Otro">
+                Otro
+              </option>
+
+              <option value="Prefiero no decirlo">
+                Prefiero no decirlo
+              </option>
+
+            </select>
+
+          </div>
+
+
+          <div class="form-group form-group-full">
+
+            <label for="profile-bio">
+              Biografía
+            </label>
+
+            <textarea
+              id="profile-bio"
+              name="bio"
+              [(ngModel)]="profile.bio"
+              maxlength="1000"
+              rows="6"
+              placeholder="Escribe una breve descripción sobre ti..."
+            ></textarea>
+
+            <div class="field-footer">
+
+              <small class="field-help">
+                Puedes utilizar hasta 1000 caracteres.
+              </small>
+
+              <small class="character-count">
+                {{ profile.bio?.length ?? 0 }}/1000
+              </small>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div class="profile-actions">
+
+        <div class="actions-description">
+
+          <strong>
+            Guardar cambios
+          </strong>
+
+          <span>
+            La información se actualizará en tu perfil.
+          </span>
+
+        </div>
+
+
+        <div class="actions-buttons">
+
+          <button
+            type="submit"
+            class="btn-primary"
+            [disabled]="
+              profileForm.invalid ||
+              saving ||
+              deleting
+            "
+          >
+
+            <span
+              *ngIf="saving"
+              class="button-spinner"
+              aria-hidden="true"
+            ></span>
+
+            {{ saving ? 'Guardando...' : 'Guardar perfil' }}
+
+          </button>
+
+
+          <button
+            type="button"
+            class="btn-danger"
+            (click)="deleteProfile()"
+            [disabled]="saving || deleting"
+          >
+
+            <span
+              *ngIf="deleting"
+              class="button-spinner"
+              aria-hidden="true"
+            ></span>
+
+            {{ deleting ? 'Eliminando...' : 'Eliminar perfil' }}
+
+          </button>
+
+        </div>
+
+      </div>
+
+    </form>
+
+  </section>
+
+</main>

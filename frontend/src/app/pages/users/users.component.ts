@@ -1,3 +1,66 @@
+/**
+ * ============================================================
+ * TAP TERMINAL
+ * USERS COMPONENT
+ * ============================================================
+ *
+ * Archivo:
+ *
+ *     frontend/src/app/pages/users/users.component.ts
+ *
+ * Responsabilidad:
+ *
+ * Administrar la pantalla de usuarios del sistema TAP Terminal.
+ *
+ * Funcionalidades:
+ *
+ * - Listar usuarios.
+ * - Crear usuarios.
+ * - Editar usuarios.
+ * - Eliminar usuarios.
+ * - Consultar detalle de usuario.
+ * - Seleccionar fotografía de perfil.
+ * - Validar fotografía.
+ * - Validar correo electrónico.
+ * - Validar teléfono.
+ * - Validar contraseña.
+ * - Cargar perfiles de autorización.
+ * - Asignar perfiles de autorización.
+ * - Cambiar perfiles de autorización.
+ * - Mostrar perfiles asignados.
+ * - Construir URL pública de fotografías.
+ * - Exportar usuarios a Excel.
+ * - Exportar usuarios a PDF.
+ *
+ * API utilizada:
+ *
+ *     GET    /api/users
+ *     POST   /api/users
+ *     GET    /api/users/{id}
+ *     PUT    /api/users/{id}
+ *     DELETE /api/users/{id}
+ *
+ * Perfiles:
+ *
+ *     GET /api/access-profiles
+ *
+ * Seguridad:
+ *
+ * La autenticación se gestiona mediante:
+ *
+ *     AuthService
+ *     AuthInterceptor
+ *     Laravel Sanctum
+ *
+ * El cierre de sesión NO pertenece a este componente.
+ *
+ * El logout está centralizado en:
+ *
+ *     shared/navbar/navbar.component.ts
+ *
+ * ============================================================
+ */
+
 import {
   CommonModule
 } from '@angular/common';
@@ -12,18 +75,18 @@ import {
 } from '@angular/forms';
 
 import {
-  Router
-} from '@angular/router';
-
-import {
   User,
   UserResponse,
   UserService
 } from '../../services/user.service';
 
 import {
-  AuthService
-} from '../../services/auth.service';
+  AccessProfile
+} from '../../models/auth';
+
+import {
+  AccessProfileService
+} from '../../services/access-profile.service';
 
 import * as XLSX from 'xlsx';
 
@@ -34,149 +97,295 @@ import autoTable from 'jspdf-autotable';
 
 /**
  * ============================================================
- * TAP TERMINAL
- * USERS COMPONENT
- * ============================================================
- *
- * Responsabilidad:
- *
- * Administrar la pantalla de usuarios.
- *
- * Funcionalidades:
- *
- * - Listar usuarios.
- * - Crear usuarios.
- * - Editar usuarios.
- * - Eliminar usuarios.
- * - Ver detalle.
- * - Subir fotografía.
- * - Exportar Excel.
- * - Exportar PDF.
- * - Cerrar sesión.
- *
- * API:
- *
- *     GET    /api/users
- *     POST   /api/users
- *     GET    /api/users/{id}
- *     PUT    /api/users/{id}
- *     DELETE /api/users/{id}
- *
- * La autenticación es gestionada por AuthInterceptor.
- *
+ * COMPONENTE
  * ============================================================
  */
 
 @Component({
-  selector: 'app-users',
 
-  standalone: true,
+  selector:
+    'app-users',
+
+  standalone:
+    true,
 
   imports: [
     CommonModule,
     FormsModule
   ],
 
-  templateUrl: './users.component.html',
+  templateUrl:
+    './users.component.html',
 
-  styleUrl: './users.component.css'
+  styleUrl:
+    './users.component.css'
+
 })
-export class UsersComponent implements OnInit {
 
 
-  /* ==========================================================
-     USUARIOS
-     ========================================================== */
+/**
+ * ============================================================
+ * CLASE USERS COMPONENT
+ * ============================================================
+ */
+
+export class UsersComponent
+  implements OnInit {
+
+
+  /**
+   * ==========================================================
+   * URL BASE DEL BACKEND
+   * ==========================================================
+   *
+   * Laravel:
+   *
+   *     http://127.0.0.1:8000
+   *
+   * Laravel publica:
+   *
+   *     storage/app/public
+   *
+   * mediante:
+   *
+   *     /storage
+   *
+   * ==========================================================
+   */
+
+  private readonly backendUrl =
+    'http://127.0.0.1:8000';
+
+
+  /**
+   * ==========================================================
+   * LISTA DE USUARIOS
+   * ==========================================================
+   */
 
   users: User[] = [];
 
 
-  /* ==========================================================
-     FORMULARIO
-     ========================================================== */
+  /**
+   * ==========================================================
+   * PERFILES DE AUTORIZACIÓN
+   * ==========================================================
+   *
+   * Se obtienen mediante:
+   *
+   *     GET /api/access-profiles
+   *
+   * Los perfiles son administrados por:
+   *
+   *     AccessProfileService
+   *
+   * ==========================================================
+   */
 
-  showForm = false;
+  accessProfiles:
+    AccessProfile[] = [];
 
-  editingUserId: string | null = null;
 
+  /**
+   * ==========================================================
+   * ESTADO DE CARGA DE PERFILES
+   * ==========================================================
+   */
+
+  loadingProfiles =
+    false;
+
+
+  /**
+   * ==========================================================
+   * PERFILES SELECCIONADOS
+   * ==========================================================
+   *
+   * Contiene los IDs MongoDB de los perfiles asignados
+   * al usuario que se está creando o editando.
+   *
+   * Laravel espera:
+   *
+   *     profile_ids[]
+   *
+   * ==========================================================
+   */
+
+  selectedProfileIds:
+    string[] = [];
+
+
+  /**
+   * ==========================================================
+   * ESTADO DEL FORMULARIO
+   * ==========================================================
+   *
+   * showForm:
+   *
+   *     false = formulario oculto.
+   *     true  = formulario visible.
+   *
+   * editingUserId:
+   *
+   *     null  = creación.
+   *     valor = edición.
+   * ==========================================================
+   */
+
+  showForm =
+    false;
+
+
+  editingUserId:
+    string | null =
+    null;
+
+
+  /**
+   * ==========================================================
+   * DATOS DEL FORMULARIO
+   * ==========================================================
+   *
+   * La contraseña nunca se obtiene desde Laravel.
+   *
+   * Solamente se utiliza cuando:
+   *
+   * - se crea un usuario;
+   * - se cambia explícitamente durante la edición.
+   * ==========================================================
+   */
 
   form = {
-    name: '',
-    email: '',
-    phone: '',
-    password: ''
+
+    name:
+      '',
+
+    email:
+      '',
+
+    phone:
+      '',
+
+    password:
+      ''
+
   };
 
 
-  /* ==========================================================
-     FOTO
-     ========================================================== */
+  /**
+   * ==========================================================
+   * FOTOGRAFÍA DE PERFIL
+   * ==========================================================
+   *
+   * Formatos:
+   *
+   *     JPG
+   *     PNG
+   *     WEBP
+   *
+   * Tamaño máximo:
+   *
+   *     2 MB
+   * ==========================================================
+   */
 
-  selectedFile: File | null = null;
-
-  selectedFileName = '';
-
-
-  /* ==========================================================
-     USUARIO SELECCIONADO
-     ========================================================== */
-
-  selectedUser: User | null = null;
-
-  showDetailModal = false;
+  selectedFile:
+    File | null =
+    null;
 
 
-  /* ==========================================================
-     MENSAJES
-     ========================================================== */
+  selectedFileName =
+    '';
 
-  message = '';
+
+  /**
+   * ==========================================================
+   * USUARIO SELECCIONADO
+   * ==========================================================
+   */
+
+  selectedUser:
+    User | null =
+    null;
+
+
+  showDetailModal =
+    false;
+
+
+  /**
+   * ==========================================================
+   * MENSAJES
+   * ==========================================================
+   */
+
+  message =
+    '';
+
 
   messageType:
     'success' |
     'error' |
-    'info' = 'info';
+    'info' =
+    'info';
 
 
-  /* ==========================================================
-     ESTADO
-     ========================================================== */
+  /**
+   * ==========================================================
+   * ESTADO DE GUARDADO
+   * ==========================================================
+   */
 
-  saving = false;
+  saving =
+    false;
 
 
-  /* ==========================================================
-     CONSTRUCTOR
-     ========================================================== */
+  /**
+   * ==========================================================
+   * CONSTRUCTOR
+   * ==========================================================
+   */
 
   constructor(
 
     private readonly userService:
       UserService,
 
-    private readonly authService:
-      AuthService,
-
-    private readonly router:
-      Router
+    private readonly accessProfileService:
+      AccessProfileService
 
   ) {}
 
 
-  /* ==========================================================
-     INICIALIZACIÓN
-     ========================================================== */
+  /**
+   * ==========================================================
+   * INICIALIZACIÓN
+   * ==========================================================
+   *
+   * Carga:
+   *
+   * - usuarios;
+   * - perfiles de autorización.
+   * ==========================================================
+   */
 
   ngOnInit(): void {
 
     this.loadUsers();
 
+    this.loadAccessProfiles();
+
   }
 
 
-  /* ==========================================================
-     CARGAR USUARIOS
-     ========================================================== */
+  /**
+   * ==========================================================
+   * CARGAR USUARIOS
+   * ==========================================================
+   *
+   * GET /api/users
+   * ==========================================================
+   */
 
   loadUsers(): void {
 
@@ -187,18 +396,25 @@ export class UsersComponent implements OnInit {
         next:
           (response: UserResponse) => {
 
-            if (Array.isArray(response.data)) {
+            if (
+              Array.isArray(
+                response.data
+              )
+            ) {
 
               this.users =
                 response.data;
 
-            } else {
-
-              this.users = [];
+              return;
 
             }
 
+
+            this.users =
+              [];
+
           },
+
 
         error:
           (error: unknown) => {
@@ -207,6 +423,11 @@ export class UsersComponent implements OnInit {
               'Error al cargar usuarios:',
               error
             );
+
+
+            this.users =
+              [];
+
 
             this.showMessage(
               'error',
@@ -220,44 +441,375 @@ export class UsersComponent implements OnInit {
   }
 
 
-  /* ==========================================================
-     NUEVO USUARIO
-     ========================================================== */
+  /**
+   * ==========================================================
+   * CARGAR PERFILES DE AUTORIZACIÓN
+   * ==========================================================
+   *
+   * GET /api/access-profiles
+   *
+   * Utiliza:
+   *
+   *     AccessProfileService
+   * ==========================================================
+   */
 
-  showCreateForm(): void {
+  loadAccessProfiles(): void {
 
-    this.editingUserId =
-      null;
-
-    this.form = {
-
-      name: '',
-
-      email: '',
-
-      phone: '',
-
-      password: ''
-
-    };
-
-    this.selectedFile =
-      null;
-
-    this.selectedFileName =
-      '';
-
-    this.showForm =
+    this.loadingProfiles =
       true;
 
-    this.clearMessage();
+
+    this.accessProfileService
+      .getAll()
+      .subscribe({
+
+        /**
+         * ----------------------------------------------------
+         * RESPUESTA CORRECTA
+         * ----------------------------------------------------
+         */
+
+        next:
+          (response) => {
+
+            this.accessProfiles =
+              response.data ?? [];
+
+          },
+
+
+        /**
+         * ----------------------------------------------------
+         * ERROR
+         * ----------------------------------------------------
+         */
+
+        error:
+          (error: Error) => {
+
+            console.error(
+              'Error al cargar perfiles de autorización:',
+              error
+            );
+
+
+            this.accessProfiles =
+              [];
+
+
+            this.showMessage(
+              'error',
+              error.message ||
+              'No fue posible cargar los perfiles de autorización.'
+            );
+
+
+            this.loadingProfiles =
+              false;
+
+          },
+
+
+        /**
+         * ----------------------------------------------------
+         * FINALIZACIÓN
+         * ----------------------------------------------------
+         */
+
+        complete:
+          () => {
+
+            this.loadingProfiles =
+              false;
+
+          }
+
+      });
 
   }
 
 
-  /* ==========================================================
-     SELECCIONAR FOTO
-     ========================================================== */
+  /**
+   * ==========================================================
+   * COMPROBAR PERFIL SELECCIONADO
+   * ==========================================================
+   */
+
+  isProfileSelected(
+    profileId: string
+  ): boolean {
+
+    return this.selectedProfileIds
+      .includes(
+        String(profileId)
+      );
+
+  }
+
+
+  /**
+   * ==========================================================
+   * CAMBIAR PERFIL SELECCIONADO
+   * ==========================================================
+   *
+   * Agrega o elimina un perfil de la selección actual.
+   * ==========================================================
+   */
+
+  toggleProfile(
+    profileId: string
+  ): void {
+
+    const id =
+      String(profileId);
+
+
+    const index =
+      this.selectedProfileIds
+        .indexOf(id);
+
+
+    if (index >= 0) {
+
+      this.selectedProfileIds
+        .splice(
+          index,
+          1
+        );
+
+      return;
+
+    }
+
+
+    this.selectedProfileIds
+      .push(id);
+
+  }
+
+
+  /**
+   * ==========================================================
+   * REINICIAR PERFILES SELECCIONADOS
+   * ==========================================================
+   *
+   * Limpia completamente la selección de perfiles.
+   *
+   * Se utiliza cuando:
+   *
+   * - se abre un nuevo formulario;
+   * - se cancela una operación;
+   * - se completa una creación;
+   * - se completa una edición.
+   *
+   * ==========================================================
+   */
+
+  private resetSelectedProfiles(): void {
+
+    this.selectedProfileIds =
+      [];
+
+  }
+
+
+  /**
+   * ==========================================================
+   * OBTENER NOMBRES DE PERFILES
+   * ==========================================================
+   *
+   * Utilizado para mostrar los perfiles del usuario
+   * en el detalle y las exportaciones.
+   * ==========================================================
+   */
+
+  getUserProfileNames(
+    user: User
+  ): string {
+
+    if (
+      !user.profiles ||
+      user.profiles.length === 0
+    ) {
+
+      return 'Sin perfiles';
+
+    }
+
+
+    return user.profiles
+      .map(
+        profile =>
+          profile.name
+      )
+      .filter(Boolean)
+      .join(', ');
+
+  }
+
+
+  /**
+   * ==========================================================
+   * OBTENER CÓDIGOS DE PERFILES
+   * ==========================================================
+   *
+   * Útil para exportaciones y visualización.
+   * ==========================================================
+   */
+
+  getUserProfileCodes(
+    user: User
+  ): string {
+
+    if (
+      !user.profiles ||
+      user.profiles.length === 0
+    ) {
+
+      return 'Sin perfiles';
+
+    }
+
+
+    return user.profiles
+      .map(
+        profile =>
+          profile.code
+      )
+      .filter(Boolean)
+      .join(', ');
+
+  }
+
+
+  /**
+   * ==========================================================
+   * CONSTRUIR URL DE FOTOGRAFÍA
+   * ==========================================================
+   */
+
+  getProfilePhotoUrl(
+
+    photoPath:
+      string |
+      null |
+      undefined
+
+  ): string {
+
+    if (!photoPath) {
+
+      return '';
+
+    }
+
+
+    const photo =
+      photoPath.trim();
+
+
+    if (!photo) {
+
+      return '';
+
+    }
+
+
+    /**
+     * --------------------------------------------------------
+     * URL ABSOLUTA
+     * --------------------------------------------------------
+     */
+
+    if (
+
+      photo.startsWith(
+        'http://'
+      ) ||
+
+      photo.startsWith(
+        'https://'
+      )
+
+    ) {
+
+      return photo;
+
+    }
+
+
+    /**
+     * --------------------------------------------------------
+     * NORMALIZAR SLASH
+     * --------------------------------------------------------
+     */
+
+    const normalizedPath =
+      photo.replace(
+        /^\/+/,
+        ''
+      );
+
+
+    /**
+     * --------------------------------------------------------
+     * STORAGE YA INCLUIDO
+     * --------------------------------------------------------
+     */
+
+    if (
+      normalizedPath.startsWith(
+        'storage/'
+      )
+    ) {
+
+      return `${this.backendUrl}/${normalizedPath}`;
+
+    }
+
+
+    /**
+     * --------------------------------------------------------
+     * STORAGE NORMAL
+     * --------------------------------------------------------
+     */
+
+    return `${this.backendUrl}/storage/${normalizedPath}`;
+
+  }
+
+
+  /**
+   * ==========================================================
+   * ABRIR FORMULARIO DE CREACIÓN
+   * ==========================================================
+   */
+
+  showCreateForm(): void {
+
+    this.closeDetailModal();
+
+    this.clearMessage();
+
+    this.resetFormValues();
+
+
+    this.editingUserId =
+      null;
+
+
+    this.showForm =
+      true;
+
+  }
+
+
+  /**
+   * ==========================================================
+   * SELECCIONAR FOTOGRAFÍA
+   * ==========================================================
+   */
 
   onFileSelected(
     event: Event
@@ -268,8 +820,11 @@ export class UsersComponent implements OnInit {
 
 
     if (
+
       !input.files ||
+
       input.files.length === 0
+
     ) {
 
       this.selectedFile =
@@ -287,10 +842,20 @@ export class UsersComponent implements OnInit {
       input.files[0];
 
 
+    /**
+     * --------------------------------------------------------
+     * FORMATOS PERMITIDOS
+     * --------------------------------------------------------
+     */
+
     const allowedTypes = [
+
       'image/jpeg',
+
       'image/png',
+
       'image/webp'
+
     ];
 
 
@@ -305,10 +870,14 @@ export class UsersComponent implements OnInit {
         'La fotografía debe ser JPG, PNG o WEBP.'
       );
 
-      input.value = '';
+
+      input.value =
+        '';
+
 
       this.selectedFile =
         null;
+
 
       this.selectedFileName =
         '';
@@ -318,8 +887,21 @@ export class UsersComponent implements OnInit {
     }
 
 
+    /**
+     * --------------------------------------------------------
+     * TAMAÑO MÁXIMO
+     * --------------------------------------------------------
+     *
+     * 2 MB.
+     * --------------------------------------------------------
+     */
+
+    const maxSize =
+      2 * 1024 * 1024;
+
+
     if (
-      file.size > 2 * 1024 * 1024
+      file.size > maxSize
     ) {
 
       this.showMessage(
@@ -327,10 +909,14 @@ export class UsersComponent implements OnInit {
         'La fotografía no puede superar 2 MB.'
       );
 
-      input.value = '';
+
+      input.value =
+        '';
+
 
       this.selectedFile =
         null;
+
 
       this.selectedFileName =
         '';
@@ -340,8 +926,15 @@ export class UsersComponent implements OnInit {
     }
 
 
+    /**
+     * --------------------------------------------------------
+     * ARCHIVO VÁLIDO
+     * --------------------------------------------------------
+     */
+
     this.selectedFile =
       file;
+
 
     this.selectedFileName =
       file.name;
@@ -349,16 +942,54 @@ export class UsersComponent implements OnInit {
   }
 
 
-  /* ==========================================================
-     GUARDAR USUARIO
-     ========================================================== */
+  /**
+   * ==========================================================
+   * GUARDAR USUARIO
+   * ==========================================================
+   *
+   * CREACIÓN:
+   *
+   *     POST /api/users
+   *
+   * ACTUALIZACIÓN:
+   *
+   *     POST /api/users/{id}
+   *
+   * El UserService agrega:
+   *
+   *     _method=PUT
+   *
+   * ==========================================================
+   */
 
   saveUser(): void {
 
+    /**
+     * --------------------------------------------------------
+     * EVITAR ENVÍOS SIMULTÁNEOS
+     * --------------------------------------------------------
+     */
+
+    if (this.saving) {
+
+      return;
+
+    }
+
+
+    this.clearMessage();
+
+
+    /**
+     * --------------------------------------------------------
+     * VALIDAR NOMBRE
+     * --------------------------------------------------------
+     */
+
     const name =
-      String(
-        this.form.name ?? ''
-      ).trim();
+      this.cleanValue(
+        this.form.name
+      );
 
 
     if (!name) {
@@ -373,10 +1004,16 @@ export class UsersComponent implements OnInit {
     }
 
 
+    /**
+     * --------------------------------------------------------
+     * VALIDAR CORREO
+     * --------------------------------------------------------
+     */
+
     const email =
-      String(
-        this.form.email ?? ''
-      ).trim();
+      this.cleanValue(
+        this.form.email
+      );
 
 
     if (!email) {
@@ -392,7 +1029,9 @@ export class UsersComponent implements OnInit {
 
 
     if (
-      !this.isValidEmail(email)
+      !this.isValidEmail(
+        email
+      )
     ) {
 
       this.showMessage(
@@ -405,15 +1044,26 @@ export class UsersComponent implements OnInit {
     }
 
 
+    /**
+     * --------------------------------------------------------
+     * VALIDAR TELÉFONO
+     * --------------------------------------------------------
+     */
+
     const phone =
-      String(
-        this.form.phone ?? ''
-      ).trim();
+      this.cleanValue(
+        this.form.phone
+      );
 
 
     if (
+
       phone &&
-      !this.isValidPhone(phone)
+
+      !this.isValidPhone(
+        phone
+      )
+
     ) {
 
       this.showMessage(
@@ -426,9 +1076,32 @@ export class UsersComponent implements OnInit {
     }
 
 
+    /**
+     * --------------------------------------------------------
+     * VALIDAR CONTRASEÑA
+     * --------------------------------------------------------
+     *
+     * Creación:
+     *
+     *     obligatoria.
+     *
+     * Edición:
+     *
+     *     opcional.
+     * --------------------------------------------------------
+     */
+
+    const password =
+      this.form.password ??
+      '';
+
+
     if (
+
       this.editingUserId === null &&
-      !this.form.password
+
+      !password
+
     ) {
 
       this.showMessage(
@@ -442,8 +1115,11 @@ export class UsersComponent implements OnInit {
 
 
     if (
-      this.editingUserId === null &&
-      this.form.password.length < 8
+
+      password &&
+
+      password.length < 8
+
     ) {
 
       this.showMessage(
@@ -456,9 +1132,27 @@ export class UsersComponent implements OnInit {
     }
 
 
+    /**
+     * --------------------------------------------------------
+     * VALIDAR FOTOGRAFÍA
+     * --------------------------------------------------------
+     *
+     * Creación:
+     *
+     *     obligatoria.
+     *
+     * Edición:
+     *
+     *     opcional.
+     * --------------------------------------------------------
+     */
+
     if (
+
       this.editingUserId === null &&
+
       !this.selectedFile
+
     ) {
 
       this.showMessage(
@@ -471,9 +1165,50 @@ export class UsersComponent implements OnInit {
     }
 
 
+    /**
+     * --------------------------------------------------------
+     * VALIDAR PERFILES
+     * --------------------------------------------------------
+     *
+     * Laravel exige:
+     *
+     *     profile_ids[]
+     *
+     *     required
+     *     array
+     *     min:1
+     * --------------------------------------------------------
+     */
+
+    if (
+      this.selectedProfileIds.length === 0
+    ) {
+
+      this.showMessage(
+        'error',
+        'Debes asignar al menos un perfil de autorización.'
+      );
+
+      return;
+
+    }
+
+
+    /**
+     * ========================================================
+     * CONSTRUIR FORMDATA
+     * ========================================================
+     */
+
     const formData =
       new FormData();
 
+
+    /**
+     * --------------------------------------------------------
+     * DATOS BÁSICOS
+     * --------------------------------------------------------
+     */
 
     formData.append(
       'name',
@@ -487,6 +1222,12 @@ export class UsersComponent implements OnInit {
     );
 
 
+    /**
+     * --------------------------------------------------------
+     * TELÉFONO
+     * --------------------------------------------------------
+     */
+
     if (phone) {
 
       formData.append(
@@ -497,21 +1238,29 @@ export class UsersComponent implements OnInit {
     }
 
 
-    if (
-      this.form.password
-    ) {
+    /**
+     * --------------------------------------------------------
+     * CONTRASEÑA
+     * --------------------------------------------------------
+     */
+
+    if (password) {
 
       formData.append(
         'password',
-        this.form.password
+        password
       );
 
     }
 
 
-    if (
-      this.selectedFile
-    ) {
+    /**
+     * --------------------------------------------------------
+     * FOTOGRAFÍA
+     * --------------------------------------------------------
+     */
+
+    if (this.selectedFile) {
 
       formData.append(
         'profile_photo',
@@ -521,27 +1270,70 @@ export class UsersComponent implements OnInit {
     }
 
 
+    /**
+     * --------------------------------------------------------
+     * PERFILES DE AUTORIZACIÓN
+     * --------------------------------------------------------
+     *
+     * Laravel recibe:
+     *
+     *     profile_ids[]
+     *
+     *     profile_ids[]
+     *
+     *     profile_ids[]
+     *
+     * ========================================================
+     */
+
+    this.selectedProfileIds
+      .forEach(
+        (profileId: string) => {
+
+          formData.append(
+            'profile_ids[]',
+            profileId
+          );
+
+        }
+      );
+
+
     this.saving =
       true;
 
 
-    /* ========================================================
-       CREAR
-       ======================================================== */
+    /**
+     * ========================================================
+     * CREAR USUARIO
+     * ========================================================
+     */
 
     if (
       this.editingUserId === null
     ) {
 
       this.userService
-        .createUser(formData)
+        .createUser(
+          formData
+        )
         .subscribe({
 
+          /**
+           * --------------------------------------------------
+           * CREACIÓN CORRECTA
+           * --------------------------------------------------
+           */
+
           next:
-            (response: UserResponse) => {
+            (
+              response: UserResponse
+            ) => {
 
               if (
-                !Array.isArray(response.data)
+                !Array.isArray(
+                  response.data
+                )
               ) {
 
                 this.users = [
@@ -557,29 +1349,51 @@ export class UsersComponent implements OnInit {
 
               this.showMessage(
                 'success',
+                response.message ||
                 'Usuario creado correctamente.'
               );
 
 
               this.resetForm();
 
-              this.saving =
-                false;
-
             },
 
+
+          /**
+           * --------------------------------------------------
+           * ERROR
+           * --------------------------------------------------
+           */
+
           error:
-            (error: any) => {
+            (error: unknown) => {
 
               console.error(
                 'Error al crear usuario:',
                 error
               );
 
+
               this.handleApiError(
                 error,
                 'No fue posible crear el usuario.'
               );
+
+
+              this.saving =
+                false;
+
+            },
+
+
+          /**
+           * --------------------------------------------------
+           * FINALIZACIÓN
+           * --------------------------------------------------
+           */
+
+          complete:
+            () => {
 
               this.saving =
                 false;
@@ -594,9 +1408,11 @@ export class UsersComponent implements OnInit {
     }
 
 
-    /* ========================================================
-       ACTUALIZAR
-       ======================================================== */
+    /**
+     * ========================================================
+     * ACTUALIZAR USUARIO
+     * ========================================================
+     */
 
     const userId =
       this.editingUserId;
@@ -609,27 +1425,45 @@ export class UsersComponent implements OnInit {
       )
       .subscribe({
 
+        /**
+         * ----------------------------------------------------
+         * ACTUALIZACIÓN CORRECTA
+         * ----------------------------------------------------
+         */
+
         next:
-          (response: UserResponse) => {
+          (
+            response: UserResponse
+          ) => {
 
             if (
-              !Array.isArray(response.data)
+              !Array.isArray(
+                response.data
+              )
             ) {
 
               this.users =
                 this.users.map(
 
-                  (user: User) => {
+                  (
+                    user: User
+                  ): User => {
 
-                    if (
+                    const currentId =
                       String(
                         user.id ?? ''
-                      ) === userId
+                      );
+
+
+                    if (
+                      currentId ===
+                      userId
                     ) {
 
                       return response.data as User;
 
                     }
+
 
                     return user;
 
@@ -640,31 +1474,79 @@ export class UsersComponent implements OnInit {
             }
 
 
+            /**
+             * ------------------------------------------------
+             * ACTUALIZAR DETALLE
+             * ------------------------------------------------
+             */
+
+            if (
+
+              this.selectedUser &&
+
+              String(
+                this.selectedUser.id ?? ''
+              ) === userId &&
+
+              !Array.isArray(
+                response.data
+              )
+
+            ) {
+
+              this.selectedUser =
+                response.data as User;
+
+            }
+
+
             this.showMessage(
               'success',
+              response.message ||
               'Usuario actualizado correctamente.'
             );
 
 
             this.resetForm();
 
-            this.saving =
-              false;
-
           },
 
+
+        /**
+         * ----------------------------------------------------
+         * ERROR
+         * ----------------------------------------------------
+         */
+
         error:
-          (error: any) => {
+          (error: unknown) => {
 
             console.error(
               'Error al actualizar usuario:',
               error
             );
 
+
             this.handleApiError(
               error,
               'No fue posible actualizar el usuario.'
             );
+
+
+            this.saving =
+              false;
+
+          },
+
+
+        /**
+         * ----------------------------------------------------
+         * FINALIZACIÓN
+         * ----------------------------------------------------
+         */
+
+        complete:
+          () => {
 
             this.saving =
               false;
@@ -676,9 +1558,19 @@ export class UsersComponent implements OnInit {
   }
 
 
-  /* ==========================================================
-     EDITAR
-     ========================================================== */
+  /**
+   * ==========================================================
+   * EDITAR USUARIO
+   * ==========================================================
+   *
+   * Al editar:
+   *
+   * - carga datos básicos;
+   * - limpia contraseña;
+   * - limpia fotografía seleccionada;
+   * - carga los IDs de los perfiles existentes.
+   * ==========================================================
+   */
 
   editUser(
     user: User
@@ -686,10 +1578,10 @@ export class UsersComponent implements OnInit {
 
     this.closeDetailModal();
 
+    this.clearMessage();
 
-    if (
-      !user.id
-    ) {
+
+    if (!user.id) {
 
       this.showMessage(
         'error',
@@ -718,13 +1610,41 @@ export class UsersComponent implements OnInit {
       phone:
         user.phone ?? '',
 
-      password: ''
+      password:
+        ''
 
     };
 
 
+    /**
+     * --------------------------------------------------------
+     * CARGAR PERFILES EXISTENTES
+     * --------------------------------------------------------
+     */
+
+    this.selectedProfileIds =
+      (user.profiles ?? [])
+        .map(
+          profile =>
+            String(
+              profile.id
+            )
+        )
+        .filter(
+          profileId =>
+            Boolean(profileId)
+        );
+
+
+    /**
+     * --------------------------------------------------------
+     * LIMPIAR FOTO SELECCIONADA
+     * --------------------------------------------------------
+     */
+
     this.selectedFile =
       null;
+
 
     this.selectedFileName =
       '';
@@ -733,21 +1653,25 @@ export class UsersComponent implements OnInit {
     this.showForm =
       true;
 
-    this.clearMessage();
-
   }
 
 
-  /* ==========================================================
-     VER DETALLE
-     ========================================================== */
+  /**
+   * ==========================================================
+   * VER DETALLE
+   * ==========================================================
+   */
 
   viewUser(
     user: User
   ): void {
 
+    this.clearMessage();
+
+
     this.selectedUser =
       user;
+
 
     this.showDetailModal =
       true;
@@ -755,76 +1679,120 @@ export class UsersComponent implements OnInit {
   }
 
 
-  /* ==========================================================
-     CERRAR MODAL
-     ========================================================== */
+  /**
+   * ==========================================================
+   * CERRAR DETALLE
+   * ==========================================================
+   */
 
   closeDetailModal(): void {
 
     this.showDetailModal =
       false;
 
+
     this.selectedUser =
       null;
 
   }
 
 
-  /* ==========================================================
-     CANCELAR
-     ========================================================== */
+  /**
+   * ==========================================================
+   * CANCELAR FORMULARIO
+   * ==========================================================
+   */
 
   cancelForm(): void {
+
+    if (this.saving) {
+
+      return;
+
+    }
+
 
     this.resetForm();
 
   }
 
 
-  /* ==========================================================
-     RESET
-     ========================================================== */
+  /**
+   * ==========================================================
+   * REINICIAR FORMULARIO
+   * ==========================================================
+   */
 
   resetForm(): void {
 
     this.showForm =
       false;
 
+
     this.editingUserId =
       null;
 
-    this.form = {
 
-      name: '',
-
-      email: '',
-
-      phone: '',
-
-      password: ''
-
-    };
-
-    this.selectedFile =
-      null;
-
-    this.selectedFileName =
-      '';
+    this.resetFormValues();
 
   }
 
 
-  /* ==========================================================
-     ELIMINAR
-     ========================================================== */
+  /**
+   * ==========================================================
+   * REINICIAR VALORES
+   * ==========================================================
+   *
+   * Restablece todos los valores editables del formulario.
+   * ==========================================================
+   */
+
+  private resetFormValues(): void {
+
+    this.form = {
+
+      name:
+        '',
+
+      email:
+        '',
+
+      phone:
+        '',
+
+      password:
+        ''
+
+    };
+
+
+    this.selectedFile =
+      null;
+
+
+    this.selectedFileName =
+      '';
+
+
+    this.resetSelectedProfiles();
+
+  }
+
+
+  /**
+   * ==========================================================
+   * ELIMINAR USUARIO
+   * ==========================================================
+   *
+   * DELETE /api/users/{id}
+   * ==========================================================
+   */
 
   deleteUser(
     user: User
   ): void {
 
-    if (
-      !user.id
-    ) {
+    if (!user.id) {
 
       this.showMessage(
         'error',
@@ -838,9 +1806,7 @@ export class UsersComponent implements OnInit {
 
     const confirmed =
       window.confirm(
-
         `¿Deseas eliminar el usuario "${user.name}"?`
-
       );
 
 
@@ -858,16 +1824,30 @@ export class UsersComponent implements OnInit {
 
 
     this.userService
-      .deleteUser(userId)
+      .deleteUser(
+        userId
+      )
       .subscribe({
 
+        /**
+         * ----------------------------------------------------
+         * ELIMINACIÓN CORRECTA
+         * ----------------------------------------------------
+         */
+
         next:
-          () => {
+          (
+            response: {
+              message: string
+            }
+          ) => {
 
             this.users =
               this.users.filter(
 
-                (item: User) => {
+                (
+                  item: User
+                ): boolean => {
 
                   return String(
                     item.id ?? ''
@@ -878,11 +1858,20 @@ export class UsersComponent implements OnInit {
               );
 
 
+            /**
+             * ------------------------------------------------
+             * CERRAR DETALLE
+             * ------------------------------------------------
+             */
+
             if (
+
               this.selectedUser &&
+
               String(
                 this.selectedUser.id ?? ''
               ) === userId
+
             ) {
 
               this.closeDetailModal();
@@ -892,10 +1881,18 @@ export class UsersComponent implements OnInit {
 
             this.showMessage(
               'success',
+              response.message ||
               'Usuario eliminado correctamente.'
             );
 
           },
+
+
+        /**
+         * ----------------------------------------------------
+         * ERROR
+         * ----------------------------------------------------
+         */
 
         error:
           (error: unknown) => {
@@ -905,8 +1902,9 @@ export class UsersComponent implements OnInit {
               error
             );
 
-            this.showMessage(
-              'error',
+
+            this.handleApiError(
+              error,
               'No fue posible eliminar el usuario.'
             );
 
@@ -917,64 +1915,151 @@ export class UsersComponent implements OnInit {
   }
 
 
-  /* ==========================================================
-     VALIDAR EMAIL
-     ========================================================== */
+  /**
+   * ==========================================================
+   * VALIDAR CORREO ELECTRÓNICO
+   * ==========================================================
+   */
 
   private isValidEmail(
     email: string
   ): boolean {
 
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      .test(email);
+      .test(
+        email
+      );
 
   }
 
 
-  /* ==========================================================
-     VALIDAR TELÉFONO
-     ========================================================== */
+  /**
+   * ==========================================================
+   * VALIDAR TELÉFONO
+   * ==========================================================
+   *
+   * Formato:
+   *
+   *     +523141234567
+   * ==========================================================
+   */
 
   private isValidPhone(
     phone: string
   ): boolean {
 
     return /^\+[1-9]\d{7,14}$/
-      .test(phone);
+      .test(
+        phone
+      );
 
   }
 
 
-  /* ==========================================================
-     ERRORES DE API
-     ========================================================== */
+  /**
+   * ==========================================================
+   * LIMPIAR VALOR
+   * ==========================================================
+   */
+
+  private cleanValue(
+
+    value:
+      string |
+      null |
+      undefined
+
+  ): string {
+
+    return String(
+      value ?? ''
+    ).trim();
+
+  }
+
+
+  /**
+   * ==========================================================
+   * MANEJO DE ERRORES DE LA API
+   * ==========================================================
+   *
+   * Prioridad:
+   *
+   * 1. Errores de validación HTTP 422.
+   * 2. Mensaje enviado por Laravel.
+   * 3. Mensaje genérico.
+   * ==========================================================
+   */
 
   private handleApiError(
-    error: any,
-    fallbackMessage: string
+
+    error:
+      unknown,
+
+    fallbackMessage:
+      string
+
   ): void {
 
+    const apiError =
+      error as {
+
+        status?: number;
+
+        error?: {
+
+          message?: string;
+
+          errors?:
+            Record<
+              string,
+              string[]
+            >;
+
+        };
+
+      };
+
+
+    /**
+     * --------------------------------------------------------
+     * VALIDACIÓN 422
+     * --------------------------------------------------------
+     */
+
     if (
-      error?.status === 422 &&
-      error?.error?.errors
+
+      apiError.status === 422 &&
+
+      apiError.error?.errors
+
     ) {
 
       const errors =
-        error.error.errors;
+        apiError.error.errors;
+
+
+      const fields =
+        Object.keys(
+          errors
+        );
 
 
       const firstField =
-        Object.keys(errors)[0];
+        fields[0];
 
 
-      if (
-        firstField &&
-        errors[firstField]?.[0]
-      ) {
+      const firstError =
+        firstField
+          ? errors[firstField]?.[0]
+          : '';
+
+
+      if (firstError) {
 
         this.showMessage(
           'error',
-          errors[firstField][0]
+          firstError
         );
 
         return;
@@ -984,6 +2069,32 @@ export class UsersComponent implements OnInit {
     }
 
 
+    /**
+     * --------------------------------------------------------
+     * MENSAJE DEL BACKEND
+     * --------------------------------------------------------
+     */
+
+    if (
+      apiError.error?.message
+    ) {
+
+      this.showMessage(
+        'error',
+        apiError.error.message
+      );
+
+      return;
+
+    }
+
+
+    /**
+     * --------------------------------------------------------
+     * MENSAJE GENERAL
+     * --------------------------------------------------------
+     */
+
     this.showMessage(
       'error',
       fallbackMessage
@@ -992,9 +2103,11 @@ export class UsersComponent implements OnInit {
   }
 
 
-  /* ==========================================================
-     MENSAJES
-     ========================================================== */
+  /**
+   * ==========================================================
+   * MOSTRAR MENSAJE
+   * ==========================================================
+   */
 
   showMessage(
 
@@ -1011,11 +2124,18 @@ export class UsersComponent implements OnInit {
     this.messageType =
       type;
 
+
     this.message =
       message;
 
   }
 
+
+  /**
+   * ==========================================================
+   * LIMPIAR MENSAJE
+   * ==========================================================
+   */
 
   clearMessage(): void {
 
@@ -1025,55 +2145,14 @@ export class UsersComponent implements OnInit {
   }
 
 
-  /* ==========================================================
-     LOGOUT
-     ========================================================== */
-
-  logout(): void {
-
-    this.authService
-      .logout()
-      .subscribe({
-
-        next:
-          () => {
-
-            this.authService
-              .clearToken();
-
-            this.router
-              .navigate([
-                '/login'
-              ]);
-
-          },
-
-        error:
-          (error: unknown) => {
-
-            console.error(
-              'Error al cerrar sesión:',
-              error
-            );
-
-            this.authService
-              .clearToken();
-
-            this.router
-              .navigate([
-                '/login'
-              ]);
-
-          }
-
-      });
-
-  }
-
-
-  /* ==========================================================
-     EXCEL
-     ========================================================== */
+  /**
+   * ==========================================================
+   * EXPORTAR A EXCEL
+   * ==========================================================
+   *
+   * La contraseña nunca se exporta.
+   * ==========================================================
+   */
 
   exportToExcel(): void {
 
@@ -1094,7 +2173,9 @@ export class UsersComponent implements OnInit {
     const data =
       this.users.map(
 
-        (user: User) => ({
+        (
+          user: User
+        ) => ({
 
           Código:
             user.code ?? '',
@@ -1108,11 +2189,21 @@ export class UsersComponent implements OnInit {
           Teléfono:
             user.phone ?? '',
 
+          Perfiles:
+            this.getUserProfileNames(user),
+
+          'Códigos de perfil':
+            this.getUserProfileCodes(user),
+
           'Fecha de creación':
             user.created_at
+
               ? new Date(
                   user.created_at
-                ).toLocaleString('es-MX')
+                ).toLocaleString(
+                  'es-MX'
+                )
+
               : ''
 
         })
@@ -1158,9 +2249,11 @@ export class UsersComponent implements OnInit {
   }
 
 
-  /* ==========================================================
-     PDF
-     ========================================================== */
+  /**
+   * ==========================================================
+   * EXPORTAR A PDF
+   * ==========================================================
+   */
 
   exportToPDF(): void {
 
@@ -1181,6 +2274,12 @@ export class UsersComponent implements OnInit {
     const doc =
       new jsPDF();
 
+
+    /**
+     * --------------------------------------------------------
+     * ENCABEZADO
+     * --------------------------------------------------------
+     */
 
     doc.setFontSize(
       18
@@ -1222,6 +2321,12 @@ export class UsersComponent implements OnInit {
     );
 
 
+    /**
+     * --------------------------------------------------------
+     * CABECERAS
+     * --------------------------------------------------------
+     */
+
     const head:
       string[][] = [
 
@@ -1235,12 +2340,20 @@ export class UsersComponent implements OnInit {
 
           'Teléfono',
 
+          'Perfiles',
+
           'Fecha de creación'
 
         ]
 
       ];
 
+
+    /**
+     * --------------------------------------------------------
+     * CUERPO
+     * --------------------------------------------------------
+     */
 
     const body:
       string[][] =
@@ -1267,11 +2380,17 @@ export class UsersComponent implements OnInit {
             user.phone ?? '—'
           ),
 
+          this.getUserProfileNames(
+            user
+          ),
+
           user.created_at
 
             ? new Date(
                 user.created_at
-              ).toLocaleString('es-MX')
+              ).toLocaleString(
+                'es-MX'
+              )
 
             : '—'
 
@@ -1279,6 +2398,12 @@ export class UsersComponent implements OnInit {
 
       );
 
+
+    /**
+     * --------------------------------------------------------
+     * TABLA
+     * --------------------------------------------------------
+     */
 
     autoTable(
 
@@ -1302,7 +2427,10 @@ export class UsersComponent implements OnInit {
             7,
 
           cellPadding:
-            3
+            3,
+
+          overflow:
+            'linebreak'
 
         },
 
@@ -1317,6 +2445,12 @@ export class UsersComponent implements OnInit {
 
     );
 
+
+    /**
+     * --------------------------------------------------------
+     * GUARDAR
+     * --------------------------------------------------------
+     */
 
     doc.save(
       'usuarios-tap-terminal.pdf'

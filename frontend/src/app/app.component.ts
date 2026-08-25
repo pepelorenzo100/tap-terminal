@@ -4,31 +4,59 @@
  * APP COMPONENT
  * ============================================================
  *
- * Componente raíz de la aplicación.
+ * Archivo:
  *
- * Responsabilidades:
+ *     frontend/src/app/app.component.ts
  *
- *     - Mostrar el menú principal.
+ * Responsabilidad:
+ *
+ *     Componente raíz de la aplicación Angular.
+ *
+ * Funciones:
+ *
+ *     - Mostrar el Navbar.
  *     - Proporcionar el RouterOutlet.
- *     - Servir como contenedor común de las páginas.
+ *     - Recuperar la sesión existente al arrancar la aplicación.
  *
- * Arquitectura:
+ * ============================================================
  *
- *     AppComponent
- *          |
- *          +----> NavbarComponent
- *          |
- *          +----> RouterOutlet
- *                         |
- *                         +----> /products
- *                         |
- *                         +----> /users
+ * RESTAURACIÓN DE SESIÓN
+ * ============================================================
+ *
+ * Cuando el navegador recarga directamente una ruta protegida,
+ * Angular crea nuevamente los servicios en memoria.
+ *
+ * El token permanece almacenado, pero los datos obtenidos desde
+ * /api/me se encuentran inicialmente vacíos.
+ *
+ * Por ese motivo, cuando existe un token:
+ *
+ *     AuthService.me()
+ *
+ * vuelve a consultar:
+ *
+ *     GET /api/me
+ *
+ * y recupera:
+ *
+ *     - usuario autenticado
+ *     - perfiles de autorización
+ *     - secciones autorizadas
+ *
+ * Esto permite que las rutas directas como:
+ *
+ *     /users
+ *     /products
+ *     /profiles
+ *
+ * puedan iniciar correctamente después de una recarga.
  *
  * ============================================================
  */
 
 import {
-  Component
+  Component,
+  OnInit
 } from '@angular/core';
 
 import {
@@ -38,6 +66,10 @@ import {
 import {
   NavbarComponent
 } from './shared/navbar/navbar.component';
+
+import {
+  AuthService
+} from './services/auth.service';
 
 
 /**
@@ -49,22 +81,21 @@ import {
 @Component({
 
   /**
-   * Elemento raíz utilizado por Angular.
+   * Selector del componente raíz.
    */
 
-  selector: 'app-root',
-
+  selector:
+    'app-root',
 
   /**
    * Aplicación standalone.
    */
 
-  standalone: true,
-
+  standalone:
+    true,
 
   /**
-   * Componentes/directivas utilizados
-   * directamente por app.component.html.
+   * Componentes y directivas utilizados por la plantilla.
    */
 
   imports: [
@@ -75,7 +106,6 @@ import {
 
     NavbarComponent,
 
-
     /**
      * Contenedor de las rutas.
      */
@@ -84,7 +114,6 @@ import {
 
   ],
 
-
   /**
    * Plantilla principal.
    */
@@ -92,9 +121,8 @@ import {
   templateUrl:
     './app.component.html',
 
-
   /**
-   * Estilos del componente raíz.
+   * Estilos principales del componente raíz.
    */
 
   styleUrl:
@@ -105,10 +133,128 @@ import {
 
 /**
  * ============================================================
- * CLASE
+ * CLASE PRINCIPAL
  * ============================================================
  */
 
-export class AppComponent {
+export class AppComponent
+  implements OnInit {
+
+
+  /**
+   * ==========================================================
+   * CONSTRUCTOR
+   * ==========================================================
+   *
+   * AuthService se utiliza para comprobar si existe una sesión
+   * almacenada y recuperar nuevamente los datos del usuario.
+   */
+
+  constructor(
+    private readonly authService:
+      AuthService
+  ) {}
+
+
+  /**
+   * ==========================================================
+   * INICIALIZACIÓN
+   * ==========================================================
+   *
+   * Si existe un token local, solicitamos nuevamente /api/me.
+   *
+   * Si no existe token, no realizamos ninguna petición.
+   *
+   * El backend continúa siendo responsable de validar realmente
+   * la autenticación mediante Sanctum.
+   */
+
+  ngOnInit(): void {
+
+    /**
+     * --------------------------------------------------------
+     * COMPROBAR TOKEN
+     * --------------------------------------------------------
+     */
+
+    const token =
+      this.authService.getToken();
+
+
+    /**
+     * --------------------------------------------------------
+     * SIN SESIÓN
+     * --------------------------------------------------------
+     *
+     * El usuario todavía no está autenticado.
+     *
+     * No necesitamos consultar /api/me.
+     */
+
+    if (!token) {
+
+      return;
+
+    }
+
+
+    /**
+     * --------------------------------------------------------
+     * RESTAURAR SESIÓN
+     * --------------------------------------------------------
+     *
+     * AuthService.me() actualiza internamente:
+     *
+     *     userSubject
+     *     profilesSubject
+     *     sectionsSubject
+     *
+     * Si el token ya no es válido, AuthService se encarga
+     * del manejo correspondiente del error.
+     */
+
+    this.authService
+      .me()
+      .subscribe({
+
+        /**
+         * ------------------------------------------------------
+         * SESIÓN RECUPERADA
+         * ------------------------------------------------------
+         *
+         * No necesitamos hacer nada adicional.
+         *
+         * El AuthService ya actualizó sus estados internos.
+         */
+
+        next:
+          () => {
+            // La sesión fue restaurada correctamente.
+          },
+
+        /**
+         * ------------------------------------------------------
+         * ERROR
+         * ------------------------------------------------------
+         *
+         * El manejo específico del error corresponde al
+         * AuthService.
+         *
+         * No lanzamos excepciones desde AppComponent.
+         */
+
+        error:
+          (error: unknown) => {
+
+            console.error(
+              'No fue posible restaurar la sesión:',
+              error
+            );
+
+          }
+
+      });
+
+  }
 
 }

@@ -3,11 +3,15 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\PasswordResetMail;
+use App\Models\PasswordResetToken;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /*
@@ -15,28 +19,50 @@ use Illuminate\Validation\ValidationException;
 | TAP TERMINAL - AUTH CONTROLLER
 |--------------------------------------------------------------------------
 |
-| Controlador responsable de la autenticación de usuarios mediante
-| Laravel Sanctum.
+| Archivo:
 |
-| Funcionalidades:
+|     backend/app/Http/Controllers/Api/AuthController.php
+|
+| Responsabilidad:
 |
 | - Inicio de sesión.
 | - Consulta del usuario autenticado.
+| - Consulta de permisos.
 | - Cierre de sesión.
+| - Solicitud de recuperación de contraseña.
+| - Restablecimiento de contraseña.
 |
-| Arquitectura:
+| Autenticación:
 |
-| Angular
-|    ↓
-| HTTP Request
-|    ↓
-| AuthController
-|    ↓
-| Laravel Sanctum
-|    ↓
-| User / PersonalAccessToken
-|    ↓
-| MongoDB
+|     Angular
+|        ↓
+|     AuthController
+|        ↓
+|     Laravel Sanctum
+|        ↓
+|     User
+|        ↓
+|     MongoDB
+|
+| Recuperación:
+|
+|     Angular
+|        ↓
+|     /api/forgot-password
+|        ↓
+|     AuthController
+|        ↓
+|     PasswordResetToken
+|        ↓
+|     MongoDB
+|        ↓
+|     PasswordResetMail
+|        ↓
+|     correo
+|        ↓
+|     Angular /reset-password
+|        ↓
+|     /api/reset-password
 |
 |--------------------------------------------------------------------------
 */
@@ -50,13 +76,9 @@ class AuthController extends Controller
      *
      * POST /api/login
      *
-     * Datos recibidos:
+     * Ruta pública.
      *
-     * - email
-     * - password
-     * - device_name (opcional)
-     *
-     * Devuelve un token Bearer generado por Laravel Sanctum.
+     * Valida las credenciales y genera un token Sanctum.
      */
     public function login(Request $request): JsonResponse
     {
@@ -85,13 +107,11 @@ class AuthController extends Controller
             ],
         ]);
 
+
         /*
         |--------------------------------------------------------------------------
         | BUSCAR USUARIO
         |--------------------------------------------------------------------------
-        |
-        | El correo electrónico identifica al usuario durante el login.
-        |
         */
 
         $user = User::where(
@@ -99,16 +119,11 @@ class AuthController extends Controller
             $validated['email']
         )->first();
 
+
         /*
         |--------------------------------------------------------------------------
         | VALIDAR CREDENCIALES
         |--------------------------------------------------------------------------
-        |
-        | No indicamos si el correo o la contraseña fueron incorrectos
-        | por separado.
-        |
-        | Esto evita revelar información sobre usuarios registrados.
-        |
         */
 
         if (
@@ -125,6 +140,7 @@ class AuthController extends Controller
             ]);
         }
 
+
         /*
         |--------------------------------------------------------------------------
         | NOMBRE DEL DISPOSITIVO
@@ -134,63 +150,658 @@ class AuthController extends Controller
         $deviceName = $validated['device_name']
             ?? 'TAP Terminal Web';
 
+
         /*
         |--------------------------------------------------------------------------
-        | CREAR TOKEN
+        | CREAR TOKEN SANCTUM
         |--------------------------------------------------------------------------
-        |
-        | Sanctum genera un Personal Access Token.
-        |
-        | El token en texto plano solamente se devuelve en esta respuesta.
-        |
         */
 
         $token = $user->createToken(
             $deviceName
         )->plainTextToken;
 
+
         /*
         |--------------------------------------------------------------------------
         | RESPUESTA
         |--------------------------------------------------------------------------
-        |
-        | User::$hidden evita que password y remember_token
-        | sean incluidos en la respuesta JSON.
-        |
         */
 
         return response()->json([
             'message' => 'Inicio de sesión correcto.',
+
             'data' => [
                 'user' => $user,
+
                 'token' => $token,
+
                 'token_type' => 'Bearer',
             ],
         ], 200);
     }
 
+
     /**
      * ============================================================
-     * USUARIO AUTENTICADO
+     * SOLICITAR RECUPERACIÓN DE CONTRASEÑA
+     * ============================================================
+     *
+     * POST /api/forgot-password
+     *
+     * Ruta pública.
+     *
+     * Recibe:
+     *
+     *     email
+     *
+     * Genera un token de recuperación y envía un correo.
+     *
+     * IMPORTANTE:
+     *
+     * La respuesta no revela si el correo existe o no.
+     *
+     * Esto evita revelar qué cuentas están registradas
+     * en el sistema.
+     */
+    public function forgotPassword(
+        Request $request
+    ): JsonResponse {
+
+        /*
+        |--------------------------------------------------------------------------
+        | VALIDACIÓN
+        |--------------------------------------------------------------------------
+        */
+
+        $validated = $request->validate([
+            'email' => [
+                'required',
+                'email',
+                'max:255',
+            ],
+        ]);
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | NORMALIZAR CORREO
+        |--------------------------------------------------------------------------
+        */
+
+        $email =
+            Str::lower(
+                trim(
+                    $validated['email']
+                )
+            );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | BUSCAR USUARIO
+        |--------------------------------------------------------------------------
+        */
+
+        $user = User::where(
+            'email',
+            $email
+        )->first();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | RESPUESTA GENÉRICA
+        |--------------------------------------------------------------------------
+        |
+        | No informamos al cliente si el correo existe.
+        |
+        */
+
+        $genericResponse = function (): JsonResponse {
+
+            return response()->json([
+                'message' =>
+                    'Si el correo está registrado, recibirás instrucciones para recuperar tu contraseña.',
+            ], 200);
+        };
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | USUARIO NO EXISTE
+        |--------------------------------------------------------------------------
+        */
+
+        if (! $user) {
+
+            return $genericResponse();
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | ELIMINAR TOKENS ANTERIORES
+        |--------------------------------------------------------------------------
+        |
+        | Solamente mantenemos vigente el último proceso
+        | de recuperación solicitado para ese correo.
+        |
+        */
+
+        PasswordResetToken::where(
+            'email',
+            $email
+        )->delete();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | GENERAR TOKEN
+        |--------------------------------------------------------------------------
+        |
+        | random() genera un token criptográficamente seguro.
+        |
+        | El token que viaja por correo no se guarda directamente
+        | en MongoDB.
+        |--------------------------------------------------------------------------
+        */
+
+        $plainToken =
+            Str::random(64);
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | GUARDAR TOKEN
+        |--------------------------------------------------------------------------
+        |
+        | Se almacena únicamente el hash del token.
+        |
+        | Si alguien obtiene acceso a la colección,
+        | no podrá utilizar directamente el valor almacenado.
+        |
+        */
+
+        PasswordResetToken::create([
+
+            'email' =>
+                $email,
+
+            'token' =>
+                hash(
+                    'sha256',
+                    $plainToken
+                ),
+
+            'created_at' =>
+                now(),
+
+        ]);
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | CONSTRUIR URL DE ANGULAR
+        |--------------------------------------------------------------------------
+        |
+        | El frontend será responsable de mostrar la pantalla:
+        |
+        |     /reset-password
+        |
+        | El token se envía como parámetro de consulta.
+        |
+        | Ejemplo:
+        |
+        |     http://localhost:4200/reset-password?token=...
+        |
+        */
+
+        $frontendUrl =
+            rtrim(
+                env(
+                    'FRONTEND_URL',
+                    'http://localhost:4200'
+                ),
+                '/'
+            );
+
+
+        $resetUrl =
+            $frontendUrl .
+            '/reset-password?token=' .
+            urlencode(
+                $plainToken
+            ) .
+            '&email=' .
+            urlencode(
+                $email
+            );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | ENVIAR CORREO
+        |--------------------------------------------------------------------------
+        */
+
+        Mail::to(
+            $email
+        )->send(
+            new PasswordResetMail(
+                $email,
+                $plainToken,
+                $resetUrl
+            )
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | RESPUESTA
+        |--------------------------------------------------------------------------
+        */
+
+        return $genericResponse();
+    }
+
+
+    /**
+     * ============================================================
+     * RESTABLECER CONTRASEÑA
+     * ============================================================
+     *
+     * POST /api/reset-password
+     *
+     * Ruta pública.
+     *
+     * Recibe:
+     *
+     *     email
+     *     token
+     *     password
+     *     password_confirmation
+     *
+     * El token debe:
+     *
+     * - existir;
+     * - corresponder al correo;
+     * - no haber expirado;
+     * - coincidir con el hash almacenado.
+     */
+    public function resetPassword(
+        Request $request
+    ): JsonResponse {
+
+        /*
+        |--------------------------------------------------------------------------
+        | VALIDACIÓN
+        |--------------------------------------------------------------------------
+        */
+
+        $validated = $request->validate([
+
+            'email' => [
+                'required',
+                'email',
+                'max:255',
+            ],
+
+            'token' => [
+                'required',
+                'string',
+            ],
+
+            'password' => [
+                'required',
+                'string',
+                'min:8',
+                'confirmed',
+            ],
+
+        ]);
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | NORMALIZAR CORREO
+        |--------------------------------------------------------------------------
+        */
+
+        $email =
+            Str::lower(
+                trim(
+                    $validated['email']
+                )
+            );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | BUSCAR TOKEN
+        |--------------------------------------------------------------------------
+        */
+
+        $resetToken =
+            PasswordResetToken::where(
+                'email',
+                $email
+            )
+            ->first();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | VALIDAR EXISTENCIA
+        |--------------------------------------------------------------------------
+        */
+
+        if (! $resetToken) {
+
+            return response()->json([
+                'message' =>
+                    'El enlace de recuperación no es válido o ha expirado.',
+            ], 422);
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | VALIDAR EXPIRACIÓN
+        |--------------------------------------------------------------------------
+        |
+        | Los tokens son válidos durante 60 minutos.
+        |--------------------------------------------------------------------------
+        */
+
+        $createdAt =
+            $resetToken->created_at;
+
+
+        if (
+            ! $createdAt ||
+            $createdAt->lt(
+                now()->subMinutes(60)
+            )
+        ) {
+
+            $resetToken->delete();
+
+            return response()->json([
+                'message' =>
+                    'El enlace de recuperación no es válido o ha expirado.',
+            ], 422);
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | VALIDAR TOKEN
+        |--------------------------------------------------------------------------
+        */
+
+        $tokenHash =
+            hash(
+                'sha256',
+                $validated['token']
+            );
+
+
+        if (
+            ! hash_equals(
+                (string) $resetToken->token,
+                $tokenHash
+            )
+        ) {
+
+            return response()->json([
+                'message' =>
+                    'El enlace de recuperación no es válido o ha expirado.',
+            ], 422);
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | BUSCAR USUARIO
+        |--------------------------------------------------------------------------
+        */
+
+        $user =
+            User::where(
+                'email',
+                $email
+            )->first();
+
+
+        if (! $user) {
+
+            return response()->json([
+                'message' =>
+                    'El enlace de recuperación no es válido o ha expirado.',
+            ], 422);
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | ACTUALIZAR CONTRASEÑA
+        |--------------------------------------------------------------------------
+        */
+
+        $user->password =
+            Hash::make(
+                $validated['password']
+            );
+
+
+        $user->save();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | ELIMINAR TOKEN UTILIZADO
+        |--------------------------------------------------------------------------
+        |
+        | El token solamente puede utilizarse una vez.
+        |
+        */
+
+        $resetToken->delete();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | REVOCAR TOKENS SANCTUM
+        |--------------------------------------------------------------------------
+        |
+        | Si el usuario tenía sesiones activas,
+        | las revocamos para obligarlo a iniciar sesión
+        | nuevamente con la nueva contraseña.
+        |
+        */
+
+        $user->tokens()->delete();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | RESPUESTA
+        |--------------------------------------------------------------------------
+        */
+
+        return response()->json([
+            'message' =>
+                'La contraseña fue restablecida correctamente.',
+        ], 200);
+    }
+
+
+    /**
+     * ============================================================
+     * USUARIO AUTENTICADO Y SUS PERMISOS
      * ============================================================
      *
      * GET /api/me
      *
      * Requiere:
      *
-     * Authorization: Bearer TOKEN
+     *     Authorization: Bearer TOKEN
      *
      * Middleware:
      *
-     * auth:sanctum
+     *     auth:sanctum
      */
-    public function me(Request $request): JsonResponse
-    {
+    public function me(
+        Request $request
+    ): JsonResponse {
+
+        /*
+        |--------------------------------------------------------------------------
+        | USUARIO AUTENTICADO
+        |--------------------------------------------------------------------------
+        */
+
+        $user =
+            $request->user();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | OBTENER ASIGNACIONES
+        |--------------------------------------------------------------------------
+        */
+
+        $userProfiles =
+            $user
+                ->userProfiles()
+                ->get();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | OBTENER PERFILES DE AUTORIZACIÓN
+        |--------------------------------------------------------------------------
+        */
+
+        $accessProfiles =
+            $userProfiles
+                ->map(
+                    function ($userProfile) {
+
+                        return $userProfile
+                            ->accessProfile;
+
+                    }
+                )
+                ->filter()
+                ->values();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | OBTENER SECCIONES
+        |--------------------------------------------------------------------------
+        */
+
+        $sections =
+            $accessProfiles
+                ->flatMap(
+                    function ($accessProfile) {
+
+                        return $accessProfile
+                            ->sections();
+
+                    }
+                )
+                ->unique(
+                    fn ($section) =>
+                        (string) $section->getKey()
+                )
+                ->values();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | RESPUESTA
+        |--------------------------------------------------------------------------
+        */
+
         return response()->json([
-            'message' => 'Usuario autenticado correctamente.',
-            'data' => $request->user(),
+
+            'message' =>
+                'Usuario autenticado correctamente.',
+
+            'data' => [
+
+                'user' =>
+                    $user,
+
+                'access_profiles' =>
+                    $accessProfiles
+                        ->map(
+                            function ($profile) {
+
+                                return [
+
+                                    'id' =>
+                                        (string)
+                                        $profile->getKey(),
+
+                                    'code' =>
+                                        $profile->code,
+
+                                    'name' =>
+                                        $profile->name,
+
+                                    'description' =>
+                                        $profile->description,
+
+                                ];
+
+                            }
+                        )
+                        ->values(),
+
+                'sections' =>
+                    $sections
+                        ->map(
+                            function ($section) {
+
+                                return [
+
+                                    'id' =>
+                                        (string)
+                                        $section->getKey(),
+
+                                    'code' =>
+                                        $section->code,
+
+                                    'name' =>
+                                        $section->name,
+
+                                    'description' =>
+                                        $section->description,
+
+                                    'route' =>
+                                        $section->route,
+
+                                ];
+
+                            }
+                        )
+                        ->values(),
+
+            ],
+
         ], 200);
     }
+
 
     /**
      * ============================================================
@@ -199,63 +810,47 @@ class AuthController extends Controller
      *
      * POST /api/logout
      *
-     * Requiere:
-     *
-     * Authorization: Bearer TOKEN
-     *
      * Revoca únicamente el token utilizado en la petición actual.
-     *
-     * Esto permite que otras sesiones/dispositivos del usuario
-     * permanezcan activos.
      */
-    public function logout(Request $request): JsonResponse
-    {
+    public function logout(
+        Request $request
+    ): JsonResponse {
+
         /*
         |--------------------------------------------------------------------------
         | OBTENER TOKEN ACTUAL
         |--------------------------------------------------------------------------
-        |
-        | Sanctum proporciona el token utilizado para autenticar
-        | la petición actual.
-        |
         */
 
-        $token = $request->user()->currentAccessToken();
+        $token =
+            $request
+                ->user()
+                ->currentAccessToken();
+
 
         /*
         |--------------------------------------------------------------------------
         | REVOCAR TOKEN
         |--------------------------------------------------------------------------
-        |
-        | La forma oficial de revocar el token actual en Sanctum
-        | es eliminarlo de la base de datos.
-        |
         */
 
         if ($token) {
+
             $token->delete();
+
         }
+
 
         /*
         |--------------------------------------------------------------------------
         | LIMPIAR USUARIO DEL GUARD
         |--------------------------------------------------------------------------
-        |
-        | RequestGuard conserva internamente el usuario autenticado.
-        |
-        | Durante pruebas y determinados escenarios donde varias
-        | peticiones utilizan la misma instancia de aplicación,
-        | eliminar el token no limpia automáticamente ese usuario
-        | que ya había sido resuelto.
-        |
-        | forgetUser() obliga al guard a olvidar el usuario actual.
-        |
-        | En la siguiente petición, Sanctum deberá validar nuevamente
-        | el Bearer Token contra MongoDB.
-        |
         */
 
-        Auth::guard('sanctum')->forgetUser();
+        Auth::guard(
+            'sanctum'
+        )->forgetUser();
+
 
         /*
         |--------------------------------------------------------------------------
@@ -264,7 +859,8 @@ class AuthController extends Controller
         */
 
         return response()->json([
-            'message' => 'Sesión cerrada correctamente.',
+            'message' =>
+                'Sesión cerrada correctamente.',
         ], 200);
     }
 }

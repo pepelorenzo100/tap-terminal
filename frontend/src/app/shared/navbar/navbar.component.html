@@ -4,30 +4,36 @@
   NAVBAR
   ============================================================
 
-  Menú principal del sistema.
+  Navegación principal.
 
-  Navegación:
+  Las opciones administrativas solamente se muestran
+  cuando el usuario posee la sección correspondiente.
 
-      /products
-      /users
+  IMPORTANTE:
 
-  La navegación utiliza Angular Router.
+      Ocultar un enlace NO constituye seguridad.
 
-  El botón de cerrar sesión utiliza AuthService
-  mediante NavbarComponent.
+  La seguridad real se mantiene mediante:
+
+      Angular AuthGuard
+      +
+      Laravel Sanctum
+      +
+      autorización del backend
   ============================================================
 -->
 
 <nav class="navbar">
 
+
   <!-- ========================================================
-       IDENTIDAD DEL SISTEMA
+       IDENTIDAD
        ======================================================== -->
 
   <div class="navbar-brand">
 
     <a
-      routerLink="/products"
+      routerLink="/"
       class="navbar-title"
     >
       TAP Terminal
@@ -41,38 +47,79 @@
 
 
   <!-- ========================================================
-       MENÚ PRINCIPAL
+       MENÚ AUTENTICADO
        ======================================================== -->
 
   @if (isAuthenticated) {
 
     <div class="navbar-menu">
 
+
       <!-- ====================================================
            PRODUCTOS
            ==================================================== -->
 
-      <a
-        routerLink="/products"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="{ exact: true }"
-        class="navbar-link"
-      >
-        Productos
-      </a>
+      @if (canAccessProducts) {
+
+        <a
+          routerLink="/products"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          class="navbar-link"
+        >
+          Productos
+        </a>
+
+      }
 
 
       <!-- ====================================================
            USUARIOS
            ==================================================== -->
 
+      @if (canAccessUsers) {
+
+        <a
+          routerLink="/users"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          class="navbar-link"
+        >
+          Usuarios
+        </a>
+
+      }
+
+
+      <!-- ====================================================
+           PERFILES DE AUTORIZACIÓN
+           ==================================================== -->
+
+      @if (canAccessProfiles) {
+
+        <a
+          routerLink="/profiles"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          class="navbar-link"
+        >
+          Perfiles
+        </a>
+
+      }
+
+
+      <!-- ====================================================
+           PERFIL PERSONAL
+           ==================================================== -->
+
       <a
-        routerLink="/users"
+        routerLink="/profile"
         routerLinkActive="active"
         [routerLinkActiveOptions]="{ exact: true }"
         class="navbar-link"
       >
-        Usuarios
+        Perfil
       </a>
 
 

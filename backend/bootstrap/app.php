@@ -10,7 +10,7 @@
 |
 | Responsabilidad:
 |
-| Este archivo configura la aplicación principal de Laravel.
+| Este archivo configura la aplicación principal de Laravel 11.
 |
 | Aquí se registran:
 |
@@ -18,8 +18,9 @@
 | - Rutas API.
 | - Comandos Artisan.
 | - Endpoint de comprobación de salud.
-| - Middleware.
+| - Alias de middleware personalizados.
 | - Manejo de excepciones.
+| - Respuestas JSON para la API.
 |
 |--------------------------------------------------------------------------
 |
@@ -44,7 +45,7 @@
 |
 |--------------------------------------------------------------------------
 |
-| AUTENTICACIÓN API
+| AUTENTICACIÓN
 |--------------------------------------------------------------------------
 |
 | Las rutas protegidas utilizan:
@@ -64,6 +65,27 @@
 |     /login
 |
 |--------------------------------------------------------------------------
+|
+| AUTORIZACIÓN
+|--------------------------------------------------------------------------
+|
+| TAP Terminal utiliza además un middleware personalizado:
+|
+|     CheckSectionPermission
+|
+| Alias:
+|
+|     section
+|
+| Ejemplo de utilización:
+|
+|     ->middleware('section:SEC-PRODUCTS')
+|
+| Este middleware permite comprobar que el usuario autenticado
+| tenga asignada la sección correspondiente mediante sus perfiles
+| de autorización.
+|
+|--------------------------------------------------------------------------
 */
 
 use Illuminate\Foundation\Application;
@@ -77,13 +99,13 @@ use Illuminate\Http\Request;
 | CREAR CONFIGURACIÓN PRINCIPAL DE LARAVEL
 |--------------------------------------------------------------------------
 |
-| Application::configure() inicia la configuración de la aplicación.
+| Application::configure() inicia la configuración de Laravel.
 |
 | basePath:
 |
 |     dirname(__DIR__)
 |
-| apunta al directorio raíz del backend Laravel.
+| apunta al directorio raíz del backend.
 |
 |--------------------------------------------------------------------------
 */
@@ -137,8 +159,7 @@ return Application::configure(
 |
 | /up
 |
-| Permite comprobar que la aplicación Laravel
-| está funcionando correctamente.
+| Permite comprobar que Laravel está funcionando.
 |
 |--------------------------------------------------------------------------
 */
@@ -189,54 +210,44 @@ return Application::configure(
 |--------------------------------------------------------------------------
 |
 | Aquí configuramos el comportamiento de los middleware
-| de la aplicación.
+| utilizados por la aplicación.
 |
 |--------------------------------------------------------------------------
-|
-| PROBLEMA QUE ESTAMOS CORRIGIENDO
+| MIDDLEWARE PERSONALIZADO
 |--------------------------------------------------------------------------
 |
-| Las rutas:
+| Registramos el alias:
 |
-|     /api/products
-|     /api/users
-|     /api/me
-|     /api/logout
+|     section
 |
-| están protegidas mediante:
+| para nuestro middleware:
+|
+|     CheckSectionPermission
+|
+| Esto permite utilizarlo directamente desde routes/api.php:
+|
+|     ->middleware('section:SEC-PRODUCTS')
+|
+| El middleware comprueba:
+|
+|     Usuario
+|         ↓
+|     UserProfile
+|         ↓
+|     AccessProfile
+|         ↓
+|     Section
+|
+|--------------------------------------------------------------------------
+| AUTENTICACIÓN API
+|--------------------------------------------------------------------------
+|
+| Las rutas protegidas utilizan:
 |
 |     auth:sanctum
 |
-| Si una petición llega sin autenticación, Laravel puede intentar
-| redirigir al usuario hacia:
-|
-|     route('login')
-|
-| El problema es que TAP Terminal no tiene una ruta web llamada
-| "login". El login pertenece a Angular.
-|
-| Por eso una petición API sin token estaba provocando:
-|
-|     Route [login] not defined
-|
-| y posteriormente:
-|
-|     HTTP 500 Internal Server Error
-|
-|--------------------------------------------------------------------------
-|
-| COMPORTAMIENTO DESEADO
-|--------------------------------------------------------------------------
-|
-| Para las rutas API:
-|
-|     /api/*
-|
-| NO queremos redirección.
-|
-| Queremos que Laravel devuelva:
-|
-|     HTTP 401 Unauthorized
+| Si el usuario no está autenticado, la API debe responder
+| con HTTP 401 y no realizar una redirección HTML.
 |
 |--------------------------------------------------------------------------
 */
@@ -245,12 +256,38 @@ return Application::configure(
 
     /*
     |--------------------------------------------------------------------------
+    | ALIAS DEL MIDDLEWARE DE PERMISOS
+    |--------------------------------------------------------------------------
+    |
+    | Registramos el middleware encargado de comprobar permisos
+    | por sección.
+    |
+    | Alias:
+    |
+    |     section
+    |
+    | Ejemplos:
+    |
+    |     section:SEC-PRODUCTS
+    |     section:SEC-USERS
+    |     section:SEC-PROFILES
+    |     section:SEC-SECTIONS
+    |
+    */
+
+    $middleware->alias([
+        'section' =>
+            \App\Http\Middleware\CheckSectionPermission::class,
+    ]);
+
+
+    /*
+    |--------------------------------------------------------------------------
     | REDIRECCIÓN DE USUARIOS NO AUTENTICADOS
     |--------------------------------------------------------------------------
     |
-    | redirectGuestsTo() permite definir el comportamiento
-    | cuando el middleware de autenticación encuentra un usuario
-    | que no está autenticado.
+    | redirectGuestsTo() permite definir qué sucede cuando
+    | auth:sanctum encuentra una petición sin autenticación.
     |
     */
 
@@ -261,10 +298,14 @@ return Application::configure(
         | PETICIÓN API
         |--------------------------------------------------------------------------
         |
-        | Las peticiones API no deben ser redirigidas.
+        | Las peticiones API no deben ser redirigidas hacia
+        | una página de login de Laravel.
         |
-        | Devolvemos null para que Laravel continúe con el
-        | comportamiento de autenticación correspondiente.
+        | Angular controla la pantalla:
+        |
+        |     /login
+        |
+        | Por eso devolvemos null.
         |
         */
 
@@ -278,8 +319,8 @@ return Application::configure(
         | PETICIÓN WEB
         |--------------------------------------------------------------------------
         |
-        | Para una ruta web tradicional mantenemos el comportamiento
-        | normal de Laravel utilizando la ruta "login".
+        | Para rutas web tradicionales mantenemos el comportamiento
+        | estándar utilizando la ruta "login".
         |
         */
 
@@ -294,23 +335,15 @@ return Application::configure(
 | CONFIGURACIÓN DE EXCEPCIONES
 |--------------------------------------------------------------------------
 |
-| Esta sección determina cómo Laravel representa las excepciones
-| producidas durante una petición HTTP.
+| Las rutas API deben responder utilizando JSON.
 |
-|--------------------------------------------------------------------------
+| Esto permite que Angular pueda interpretar correctamente:
 |
-| API
-|--------------------------------------------------------------------------
-|
-| Todas las rutas:
-|
-|     /api/*
-|
-| deben utilizar respuestas JSON.
-|
-| Esto es importante porque Angular consume la API mediante HTTP
-| y necesita recibir códigos HTTP y objetos JSON en lugar de
-| redirecciones HTML.
+|     401 Unauthorized
+|     403 Forbidden
+|     404 Not Found
+|     422 Validation Error
+|     500 Server Error
 |
 |--------------------------------------------------------------------------
 */
@@ -319,11 +352,11 @@ return Application::configure(
 
     /*
     |--------------------------------------------------------------------------
-    | DETERMINAR CUÁNDO RESPONDER CON JSON
+    | RESPUESTAS JSON PARA API
     |--------------------------------------------------------------------------
     |
-    | shouldRenderJsonWhen() permite indicar a Laravel que una
-    | excepción debe representarse como JSON.
+    | shouldRenderJsonWhen() indica a Laravel que las excepciones
+    | producidas por endpoints /api/* deben representarse como JSON.
     |
     */
 
@@ -335,9 +368,9 @@ return Application::configure(
             | PETICIONES API
             |--------------------------------------------------------------------------
             |
-            | Toda petición cuyo path comience por:
+            | Toda ruta cuyo patrón sea:
             |
-            |     /api/
+            |     /api/*
             |
             | debe recibir una respuesta JSON.
             |
@@ -350,11 +383,11 @@ return Application::configure(
 
             /*
             |--------------------------------------------------------------------------
-            | PETICIONES QUE YA SOLICITAN JSON
+            | PETICIONES QUE ESPERAN JSON
             |--------------------------------------------------------------------------
             |
-            | Conservamos el comportamiento estándar de Laravel
-            | cuando el cliente indica que espera JSON.
+            | También conservamos el comportamiento estándar cuando
+            | el cliente explícitamente solicita JSON.
             |
             */
 
@@ -370,7 +403,7 @@ return Application::configure(
 | CREAR APLICACIÓN
 |--------------------------------------------------------------------------
 |
-| Finalmente creamos la instancia de la aplicación Laravel.
+| Finalmente se construye la instancia de Laravel.
 |
 |--------------------------------------------------------------------------
 */

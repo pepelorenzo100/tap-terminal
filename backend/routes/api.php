@@ -1,59 +1,140 @@
-<?php
+﻿<?php
 
 /*
 |--------------------------------------------------------------------------
 | TAP TERMINAL - API ROUTES
 |--------------------------------------------------------------------------
 |
-| Este archivo define las rutas REST utilizadas por Angular.
+| Archivo:
 |
-| Recursos disponibles:
+|     backend/routes/api.php
 |
-| - Authentication
-| - Products
-| - Users
+| Responsabilidad:
 |
-| Flujo general:
+|     Definir todos los endpoints REST utilizados por Angular.
 |
-| Angular
-|    ↓
-| HTTP Request
-|    ↓
-| Laravel API
-|    ↓
-| Middleware
-|    ↓
-| Controller
-|    ↓
-| Model
-|    ↓
-| MongoDB
+| Arquitectura:
+|
+|     Angular
+|         ↓
+|     HTTP Request
+|         ↓
+|     Laravel API
+|         ↓
+|     Middleware
+|         ↓
+|     Controller
+|         ↓
+|     Model
+|         ↓
+|     MongoDB
 |
 |--------------------------------------------------------------------------
-|
 | AUTENTICACIÓN
+|--------------------------------------------------------------------------
 |
-| El endpoint /login es público porque permite obtener
-| el token de autenticación.
+| Los siguientes endpoints son públicos:
 |
-| Las rutas protegidas utilizan:
+|     POST /api/login
+|     POST /api/forgot-password
+|     POST /api/reset-password
+|
+| El motivo es que estos endpoints se utilizan antes de que
+| exista una sesión autenticada.
+|
+| Las operaciones administrativas requieren:
 |
 |     auth:sanctum
 |
-| El cliente Angular envía:
+| El frontend envía:
 |
 |     Authorization: Bearer TOKEN
 |
-| Laravel Sanctum valida el token antes de permitir
-| el acceso al controlador.
+| Laravel Sanctum valida el token antes de permitir el acceso.
+|
+|--------------------------------------------------------------------------
+| AUTORIZACIÓN
+|--------------------------------------------------------------------------
+|
+| Además de autenticación, las secciones administrativas utilizan
+| el middleware personalizado:
+|
+|     section
+|
+| Ejemplo:
+|
+|     section:SEC-PRODUCTS
+|
+| El middleware comprueba que el usuario tenga un perfil de
+| autorización que incluya la sección correspondiente.
+|
+|--------------------------------------------------------------------------
+| RECUPERACIÓN DE CONTRASEÑA
+|--------------------------------------------------------------------------
+|
+| Flujo:
+|
+|     Angular
+|         ↓
+|     POST /api/forgot-password
+|         ↓
+|     AuthController
+|         ↓
+|     PasswordResetToken
+|         ↓
+|     MongoDB
+|         ↓
+|     PasswordResetMail
+|         ↓
+|     Usuario
+|         ↓
+|     Angular /reset-password
+|         ↓
+|     POST /api/reset-password
+|
+|--------------------------------------------------------------------------
+| SECCIONES REGISTRADAS
+|--------------------------------------------------------------------------
+|
+| Según la configuración actual del proyecto:
+|
+|     SEC-DASHBOARD
+|         Ruta Angular: /
+|
+|     SEC-PRODUCTS
+|         Ruta Angular: /products
+|
+|     SEC-USERS
+|         Ruta Angular: /users
+|
+|     SEC-PROFILES
+|         Ruta Angular: /profiles
 |
 |--------------------------------------------------------------------------
 */
 
+use App\Http\Controllers\Api\AccessProfileController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\SectionController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
+
+
+/*
+|--------------------------------------------------------------------------
+| AUTENTICACIÓN PÚBLICA
+|--------------------------------------------------------------------------
+|
+| Estas rutas NO utilizan:
+|
+|     auth:sanctum
+|
+| porque se ejecutan antes de iniciar sesión.
+|
+|--------------------------------------------------------------------------
+*/
 
 
 /*
@@ -61,20 +142,10 @@ use Illuminate\Support\Facades\Route;
 | LOGIN
 |--------------------------------------------------------------------------
 |
-| Endpoint:
+| POST /api/login
 |
-|     POST /api/login
-|
-| Esta ruta es pública.
-|
-| El usuario proporciona:
-|
-|     email
-|     password
-|     device_name (opcional)
-|
-| Si las credenciales son correctas, AuthController genera
-| un token mediante Laravel Sanctum.
+| Ruta pública utilizada para autenticar al usuario y obtener
+| un token Sanctum.
 |
 |--------------------------------------------------------------------------
 */
@@ -87,37 +158,64 @@ Route::post(
 
 /*
 |--------------------------------------------------------------------------
-| RUTAS PROTEGIDAS
+| SOLICITAR RECUPERACIÓN DE CONTRASEÑA
 |--------------------------------------------------------------------------
 |
-| Todas las rutas definidas dentro de este grupo requieren
-| autenticación mediante Laravel Sanctum.
+| POST /api/forgot-password
 |
-| Middleware:
+| Recibe:
 |
-|     auth:sanctum
+|     email
 |
-| Flujo:
+| Genera un token de recuperación y envía un correo.
 |
-| Angular
-|    ↓
-| AuthInterceptor
-|    ↓
-| Authorization: Bearer TOKEN
-|    ↓
-| Laravel
-|    ↓
-| auth:sanctum
-|    ↓
-| Controller
+| No requiere autenticación porque el usuario puede haber
+| olvidado su contraseña.
 |
-| Si el token es válido:
+|--------------------------------------------------------------------------
+*/
+
+Route::post(
+    'forgot-password',
+    [AuthController::class, 'forgotPassword']
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| RESTABLECER CONTRASEÑA
+|--------------------------------------------------------------------------
 |
-|     acceso permitido
+| POST /api/reset-password
 |
-| Si el token es inválido, inexistente o revocado:
+| Recibe:
 |
-|     HTTP 401 Unauthorized
+|     email
+|     token
+|     password
+|     password_confirmation
+|
+| Valida el token y establece una nueva contraseña.
+|
+| No requiere autenticación porque precisamente permite
+| recuperar el acceso cuando no existe una sesión activa.
+|
+|--------------------------------------------------------------------------
+*/
+
+Route::post(
+    'reset-password',
+    [AuthController::class, 'resetPassword']
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS PROTEGIDAS POR AUTENTICACIÓN
+|--------------------------------------------------------------------------
+|
+| Todas las rutas dentro de este grupo requieren un token
+| válido de Laravel Sanctum.
 |
 |--------------------------------------------------------------------------
 */
@@ -130,13 +228,15 @@ Route::middleware('auth:sanctum')->group(function () {
     | USUARIO AUTENTICADO
     |--------------------------------------------------------------------------
     |
-    | Endpoint:
+    | GET /api/me
     |
-    |     GET /api/me
+    | Devuelve información del usuario autenticado, incluyendo:
     |
-    | Permite obtener la información del usuario
-    | correspondiente al token autenticado.
+    | - Usuario.
+    | - Perfiles de autorización.
+    | - Secciones permitidas.
     |
+    |--------------------------------------------------------------------------
     */
 
     Route::get(
@@ -150,15 +250,11 @@ Route::middleware('auth:sanctum')->group(function () {
     | LOGOUT
     |--------------------------------------------------------------------------
     |
-    | Endpoint:
+    | POST /api/logout
     |
-    |     POST /api/logout
+    | Revoca el token utilizado en la petición actual.
     |
-    | Requiere autenticación.
-    |
-    | AuthController elimina el token utilizado
-    | en la petición actual.
-    |
+    |--------------------------------------------------------------------------
     */
 
     Route::post(
@@ -169,85 +265,230 @@ Route::middleware('auth:sanctum')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | PRODUCT API
+    | PRODUCTOS
     |--------------------------------------------------------------------------
     |
-    | CRUD completo de productos.
+    | Sección:
     |
-    | Todos estos endpoints requieren autenticación.
+    |     SEC-PRODUCTS
     |
-    | GET:
+    | Ruta Angular:
     |
-    |     /api/products
+    |     /products
     |
-    | POST:
+    | Solamente los usuarios que tengan un perfil con la sección
+    | SEC-PRODUCTS pueden utilizar este CRUD.
     |
-    |     /api/products
+    | Endpoints:
     |
-    | GET:
-    |
-    |     /api/products/{product}
-    |
-    | PUT:
-    |
-    |     /api/products/{product}
-    |
-    | PATCH:
-    |
-    |     /api/products/{product}
-    |
-    | DELETE:
-    |
-    |     /api/products/{product}
+    |     GET    /api/products
+    |     POST   /api/products
+    |     GET    /api/products/{product}
+    |     PUT    /api/products/{product}
+    |     PATCH  /api/products/{product}
+    |     DELETE /api/products/{product}
     |
     |--------------------------------------------------------------------------
     */
 
-    Route::apiResource(
-        'products',
-        ProductController::class
-    );
+    Route::middleware(
+        'section:SEC-PRODUCTS'
+    )->group(function () {
+
+        Route::apiResource(
+            'products',
+            ProductController::class
+        );
+
+    });
 
 
     /*
     |--------------------------------------------------------------------------
-    | USER API
+    | USUARIOS
     |--------------------------------------------------------------------------
     |
-    | CRUD completo de usuarios.
+    | Sección:
     |
-    | Todos estos endpoints requieren autenticación.
+    |     SEC-USERS
     |
-    | GET:
+    | Ruta Angular:
     |
-    |     /api/users
+    |     /users
     |
-    | POST:
+    | Solamente los usuarios que tengan un perfil con la sección
+    | SEC-USERS pueden utilizar este CRUD.
     |
-    |     /api/users
+    | Endpoints:
     |
-    | GET:
-    |
-    |     /api/users/{user}
-    |
-    | PUT:
-    |
-    |     /api/users/{user}
-    |
-    | PATCH:
-    |
-    |     /api/users/{user}
-    |
-    | DELETE:
-    |
-    |     /api/users/{user}
+    |     GET    /api/users
+    |     POST   /api/users
+    |     GET    /api/users/{user}
+    |     PUT    /api/users/{user}
+    |     PATCH  /api/users/{user}
+    |     DELETE /api/users/{user}
     |
     |--------------------------------------------------------------------------
     */
 
-    Route::apiResource(
-        'users',
-        UserController::class
+    Route::middleware(
+        'section:SEC-USERS'
+    )->group(function () {
+
+        Route::apiResource(
+            'users',
+            UserController::class
+        );
+
+    });
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | PERFILES DE AUTORIZACIÓN
+    |--------------------------------------------------------------------------
+    |
+    | Sección:
+    |
+    |     SEC-PROFILES
+    |
+    | Ruta Angular:
+    |
+    |     /profiles
+    |
+    | Los AccessProfile determinan qué secciones puede utilizar
+    | un usuario.
+    |
+    | Endpoints:
+    |
+    |     GET    /api/access-profiles
+    |     POST   /api/access-profiles
+    |     GET    /api/access-profiles/{access_profile}
+    |     PUT    /api/access-profiles/{access_profile}
+    |     PATCH  /api/access-profiles/{access_profile}
+    |     DELETE /api/access-profiles/{access_profile}
+    |
+    |--------------------------------------------------------------------------
+    */
+
+    Route::middleware(
+        'section:SEC-PROFILES'
+    )->group(function () {
+
+        Route::apiResource(
+            'access-profiles',
+            AccessProfileController::class
+        );
+
+    });
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | SECCIONES
+    |--------------------------------------------------------------------------
+    |
+    | Las secciones forman parte de la administración de permisos.
+    |
+    | En este proyecto no existe actualmente una sección:
+    |
+    |     SEC-SECTIONS
+    |
+    | registrada en MongoDB.
+    |
+    | Por esta razón NO protegemos este CRUD con un código inventado.
+    |
+    | En su lugar utilizamos:
+    |
+    |     SEC-PROFILES
+    |
+    | porque la administración de secciones forma parte de la
+    | configuración de los perfiles de autorización.
+    |
+    | Endpoints:
+    |
+    |     GET    /api/sections
+    |     POST   /api/sections
+    |     GET    /api/sections/{section}
+    |     PUT    /api/sections/{section}
+    |     PATCH  /api/sections/{section}
+    |     DELETE /api/sections/{section}
+    |
+    |--------------------------------------------------------------------------
+    */
+
+    Route::middleware(
+        'section:SEC-PROFILES'
+    )->group(function () {
+
+        Route::apiResource(
+            'sections',
+            SectionController::class
+        );
+
+    });
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | PERFIL PERSONAL DEL USUARIO
+    |--------------------------------------------------------------------------
+    |
+    | IMPORTANTE:
+    |
+    | Profile y AccessProfile son conceptos diferentes.
+    |
+    |--------------------------------------------------------------------------
+    |
+    | PROFILE
+    |
+    | Información personal del usuario.
+    |
+    | Ejemplos:
+    |
+    | - Datos personales.
+    | - Información del perfil personal.
+    |
+    |--------------------------------------------------------------------------
+    |
+    | ACCESS PROFILE
+    |
+    | Información de autorización.
+    |
+    | Ejemplos:
+    |
+    | - Productos.
+    | - Usuarios.
+    | - Perfiles.
+    |
+    |--------------------------------------------------------------------------
+    |
+    | Estos endpoints solamente necesitan autenticación.
+    |
+    | Endpoints:
+    |
+    |     GET    /api/profile
+    |     PUT    /api/profile
+    |     DELETE /api/profile
+    |
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get(
+        'profile',
+        [ProfileController::class, 'show']
+    );
+
+
+    Route::put(
+        'profile',
+        [ProfileController::class, 'update']
+    );
+
+
+    Route::delete(
+        'profile',
+        [ProfileController::class, 'destroy']
     );
 
 });

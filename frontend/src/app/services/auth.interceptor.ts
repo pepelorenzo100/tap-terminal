@@ -5,39 +5,71 @@
  * ============================================================
  *
  * Archivo:
- * auth.interceptor.ts
+ *
+ *     frontend/src/app/services/auth.interceptor.ts
  *
  * Responsabilidad:
  *
- * 1. Agregar automáticamente el token Bearer de Sanctum.
- * 2. Detectar respuestas HTTP 401.
- * 3. Eliminar el token cuando la sesión ya no es válida.
- * 4. Redirigir al usuario al login.
+ *     Centralizar el comportamiento de autenticación de las
+ *     peticiones HTTP realizadas mediante Angular HttpClient.
  *
- * Flujo:
+ * Funciones:
  *
- * Angular
- *    ↓
- * HttpClient
- *    ↓
- * AuthInterceptor
- *    ↓
- * Authorization: Bearer TOKEN
- *    ↓
- * Laravel Sanctum
+ *     1. Obtener el token Sanctum.
+ *     2. Agregar automáticamente el header Authorization.
+ *     3. Enviar las peticiones públicas sin token cuando no
+ *        existe una sesión autenticada.
+ *     4. Detectar respuestas HTTP 401.
+ *     5. Limpiar completamente el estado de autenticación.
+ *     6. Redirigir al login cuando la sesión deja de ser válida.
  *
- * Si Laravel responde 401:
+ * Flujo normal:
  *
- * 401 Unauthorized
- *    ↓
- * clearToken()
- *    ↓
- * /login
+ *     Angular
+ *        ↓
+ *     HttpClient
+ *        ↓
+ *     AuthInterceptor
+ *        ↓
+ *     Authorization: Bearer TOKEN
+ *        ↓
+ *     Laravel
+ *        ↓
+ *     Sanctum
+ *
+ * Flujo de sesión inválida:
+ *
+ *     Laravel
+ *        ↓
+ *     HTTP 401
+ *        ↓
+ *     AuthInterceptor
+ *        ↓
+ *     clearAuthenticationState()
+ *        ↓
+ *     /login
+ *
+ * ============================================================
+ *
+ * IMPORTANTE
+ * ============================================================
+ *
+ * Este interceptor no sustituye la autenticación de Laravel.
+ *
+ * Laravel continúa siendo responsable de validar:
+ *
+ *     auth:sanctum
+ *
+ * El interceptor solamente administra la comunicación entre
+ * Angular y la API y mantiene consistente el estado local de
+ * autenticación.
  *
  * ============================================================
  */
 
-import { inject } from '@angular/core';
+import {
+  inject
+} from '@angular/core';
 
 import {
   HttpErrorResponse,
@@ -60,13 +92,15 @@ import {
 
 /**
  * ============================================================
- * INTERCEPTOR
+ * INTERCEPTOR DE AUTENTICACIÓN
  * ============================================================
  *
  * Interceptor funcional de Angular.
  *
- * Se ejecuta automáticamente antes de enviar
- * las peticiones HTTP realizadas mediante HttpClient.
+ * Se ejecuta automáticamente para las peticiones realizadas
+ * mediante HttpClient.
+ *
+ * ============================================================
  */
 
 export const authInterceptor: HttpInterceptorFn = (
@@ -80,49 +114,58 @@ export const authInterceptor: HttpInterceptorFn = (
    * ==========================================================
    */
 
-  const authService = inject(
-    AuthService
-  );
+  const authService =
+    inject(AuthService);
 
-  const router = inject(
-    Router
-  );
+  const router =
+    inject(Router);
 
 
   /**
    * ==========================================================
    * OBTENER TOKEN
    * ==========================================================
+   *
+   * AuthService es la única fuente utilizada para obtener
+   * el token almacenado.
    */
 
-  const token = authService.getToken();
+  const token =
+    authService.getToken();
 
 
   /**
    * ==========================================================
-   * CREAR PETICIÓN AUTENTICADA
+   * PREPARAR PETICIÓN
    * ==========================================================
    *
-   * Si existe token agregamos:
+   * Si existe un token:
    *
-   * Authorization: Bearer TOKEN
+   *     Authorization: Bearer TOKEN
    *
-   * Si no existe token enviamos la petición original.
+   * Si no existe:
    *
-   * Esto permite realizar operaciones públicas como:
+   *     se conserva la petición original.
    *
-   * POST /api/login
+   * Esto permite que los endpoints públicos funcionen
+   * correctamente, por ejemplo:
+   *
+   *     POST /api/login
+   *
+   *     POST /api/forgot-password
+   *
+   *     POST /api/reset-password
    */
 
-  const authenticatedRequest = token
-
-    ? request.clone({
-        setHeaders: {
-          Authorization: `Bearer ${token}`
-        }
-      })
-
-    : request;
+  const authenticatedRequest =
+    token
+      ? request.clone({
+          setHeaders: {
+            Authorization:
+              `Bearer ${token}`
+          }
+        })
+      : request;
 
 
   /**
@@ -137,7 +180,7 @@ export const authInterceptor: HttpInterceptorFn = (
 
     /**
      * ========================================================
-     * MANEJO DE ERRORES HTTP
+     * MANEJO CENTRALIZADO DE ERRORES
      * ========================================================
      */
 
@@ -149,23 +192,20 @@ export const authInterceptor: HttpInterceptorFn = (
          * SESIÓN NO AUTORIZADA
          * ====================================================
          *
-         * HTTP 401 significa que Laravel no acepta
-         * las credenciales/token enviados.
+         * HTTP 401 indica que Laravel rechazó la autenticación.
          *
-         * Ejemplos:
+         * Puede ocurrir cuando:
          *
-         * - Token expirado.
-         * - Token revocado.
-         * - Token eliminado.
-         * - Token inválido.
+         *     - el token es inválido;
+         *     - el token fue revocado;
+         *     - el token fue eliminado;
+         *     - la sesión dejó de ser válida.
          *
-         * IMPORTANTE:
+         * No redirigimos automáticamente cuando el 401 procede
+         * del endpoint de login.
          *
-         * No hacemos redirect si el error 401 viene
-         * específicamente del endpoint de login.
-         *
-         * De esta manera el LoginComponent puede mostrar
-         * correctamente el mensaje de autenticación.
+         * En ese caso LoginComponent debe recibir el error para
+         * mostrar el mensaje correspondiente.
          */
 
         if (
@@ -175,37 +215,49 @@ export const authInterceptor: HttpInterceptorFn = (
 
           /**
            * ==================================================
-           * ELIMINAR TOKEN LOCAL
+           * LIMPIAR SESIÓN COMPLETA
            * ==================================================
            *
-           * La sesión local deja de considerarse válida.
+           * No utilizamos solamente clearToken().
+           *
+           * También debemos eliminar de memoria:
+           *
+           *     - usuario;
+           *     - perfiles;
+           *     - secciones.
+           *
+           * De esta manera evitamos conservar autorizaciones
+           * pertenecientes a una sesión inválida.
            */
 
-          authService.clearToken();
+          authService
+            .clearAuthenticationState();
 
 
           /**
            * ==================================================
            * REDIRIGIR AL LOGIN
            * ==================================================
+           *
+           * El usuario debe autenticarse nuevamente.
            */
 
-          router.navigate(
-            ['/login']
-          );
+          router.navigate([
+            '/login'
+          ]);
 
         }
 
 
         /**
-         * ==================================================
+         * ====================================================
          * PROPAGAR ERROR
-         * ==================================================
+         * ====================================================
          *
-         * No ocultamos el error.
+         * El interceptor no consume el error.
          *
-         * El servicio/componente que realizó la petición
-         * todavía puede manejarlo.
+         * El servicio que realizó la petición todavía puede
+         * manejarlo mediante su propio catchError/subscribe.
          */
 
         return throwError(

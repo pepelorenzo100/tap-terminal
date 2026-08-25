@@ -1,0 +1,1064 @@
+<!--
+  ============================================================
+  TAP TERMINAL
+  PANTALLA DE PERFILES DE AUTORIZACIÓN
+  ============================================================
+
+  Archivo:
+      frontend/src/app/pages/profiles/profiles.component.html
+
+  Funcionalidades:
+      - Consulta de perfiles.
+      - Creación de perfiles.
+      - Edición de perfiles.
+      - Consulta de detalle.
+      - Eliminación de perfiles.
+      - Selección dinámica de secciones.
+      - Exportación a PDF.
+      - Exportación a Excel.
+
+  API:
+      GET    /api/access-profiles
+      POST   /api/access-profiles
+      GET    /api/access-profiles/{id}
+      PUT    /api/access-profiles/{id}
+      DELETE /api/access-profiles/{id}
+      GET    /api/sections
+
+  IMPORTANTE:
+
+      Las secciones son dinámicas y se obtienen desde Laravel.
+      No existen secciones codificadas manualmente en este HTML.
+  ============================================================
+-->
+
+
+<section class="profiles-page">
+
+
+  <!-- ========================================================
+       ENCABEZADO
+       ======================================================== -->
+
+  <header class="profiles-header">
+
+    <div>
+
+      <h1>
+        Perfiles de usuarios
+      </h1>
+
+      <p>
+        Administración de perfiles de autorización.
+      </p>
+
+    </div>
+
+
+    <div class="profiles-actions">
+
+      <button
+        type="button"
+        class="btn btn-secondary"
+        (click)="exportToPDF()"
+        [disabled]="loading || profiles.length === 0"
+      >
+        Descargar PDF
+      </button>
+
+
+      <button
+        type="button"
+        class="btn btn-secondary"
+        (click)="exportToExcel()"
+        [disabled]="loading || profiles.length === 0"
+      >
+        Descargar Excel
+      </button>
+
+
+      <button
+        type="button"
+        class="btn btn-primary"
+        (click)="openCreateForm()"
+        [disabled]="saving || deleting"
+      >
+        Nuevo perfil
+      </button>
+
+    </div>
+
+  </header>
+
+
+  <!-- ========================================================
+       MENSAJES
+       ======================================================== -->
+
+  @if (successMessage) {
+
+    <div class="profiles-message profiles-success">
+
+      {{ successMessage }}
+
+    </div>
+
+  }
+
+
+  @if (errorMessage) {
+
+    <div class="profiles-message profiles-error">
+
+      {{ errorMessage }}
+
+    </div>
+
+  }
+
+
+  <!-- ========================================================
+       FORMULARIO DE CREACIÓN
+       ======================================================== -->
+
+  @if (showCreateForm) {
+
+    <div class="profiles-card create-profile-card">
+
+      <div class="create-profile-header">
+
+        <div>
+
+          <h2>
+            Nuevo perfil
+          </h2>
+
+          <p>
+            Define el nombre, descripción y secciones
+            permitidas para este perfil.
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="profile-form">
+
+
+        <!-- ==================================================
+             NOMBRE
+             ================================================== -->
+
+        <div class="form-group">
+
+          <label for="profile-name">
+            Nombre del perfil
+          </label>
+
+          <input
+            id="profile-name"
+            type="text"
+            [(ngModel)]="newProfileName"
+            placeholder="Ejemplo: Supervisor"
+            maxlength="255"
+            [disabled]="saving"
+          />
+
+        </div>
+
+
+        <!-- ==================================================
+             DESCRIPCIÓN
+             ================================================== -->
+
+        <div class="form-group">
+
+          <label for="profile-description">
+            Descripción
+          </label>
+
+          <textarea
+            id="profile-description"
+            [(ngModel)]="newProfileDescription"
+            placeholder="Describe el acceso que tendrá este perfil."
+            maxlength="1000"
+            rows="4"
+            [disabled]="saving"
+          ></textarea>
+
+        </div>
+
+
+        <!-- ==================================================
+             SECCIONES
+             ================================================== -->
+
+        <div class="form-group">
+
+          <div class="form-section-header">
+
+            <div>
+
+              <label>
+                Secciones permitidas
+              </label>
+
+              <p>
+                Selecciona las secciones que podrá utilizar
+                este perfil.
+              </p>
+
+            </div>
+
+
+            <span class="selected-count">
+
+              {{ selectedSectionIds.length }}
+              seleccionadas
+
+            </span>
+
+          </div>
+
+
+          @if (loadingSections) {
+
+            <div class="profiles-state">
+
+              Cargando secciones...
+
+            </div>
+
+          }
+
+
+          @if (!loadingSections) {
+
+            @if (sections.length > 0) {
+
+              <div class="sections-list">
+
+                @for (
+                  section of sections;
+                  track section.id
+                ) {
+
+                  <label
+                    class="section-option"
+                    [class.selected]="
+                      isSectionSelected(section.id)
+                    "
+                  >
+
+                    <input
+                      type="checkbox"
+                      [checked]="
+                        isSectionSelected(section.id)
+                      "
+                      (change)="
+                        toggleSection(section.id)
+                      "
+                      [disabled]="saving"
+                    />
+
+
+                    <div class="section-option-content">
+
+                      <strong>
+                        {{ section.name }}
+                      </strong>
+
+                      <span>
+                        {{ section.code }}
+                      </span>
+
+                      @if (section.description) {
+
+                        <small>
+                          {{ section.description }}
+                        </small>
+
+                      }
+
+                      <small>
+                        Ruta: {{ section.route }}
+                      </small>
+
+                    </div>
+
+                  </label>
+
+                }
+
+              </div>
+
+            }
+
+
+            @if (sections.length === 0) {
+
+              <div class="profiles-state">
+
+                <h3>
+                  No hay secciones disponibles
+                </h3>
+
+                <p>
+                  No existen secciones configuradas
+                  en Laravel.
+                </p>
+
+              </div>
+
+            }
+
+          }
+
+        </div>
+
+
+        <!-- ==================================================
+             CÓDIGO
+             ================================================== -->
+
+        <div class="profile-code-info">
+
+          <strong>
+            Código del perfil
+          </strong>
+
+          <span>
+            Será generado automáticamente por Laravel.
+          </span>
+
+        </div>
+
+
+        <!-- ==================================================
+             ACCIONES
+             ================================================== -->
+
+        <div class="profile-form-actions">
+
+          <button
+            type="button"
+            class="btn btn-secondary"
+            (click)="closeCreateForm()"
+            [disabled]="saving"
+          >
+            Cancelar
+          </button>
+
+
+          <button
+            type="button"
+            class="btn btn-primary"
+            (click)="createProfile()"
+            [disabled]="
+              saving ||
+              !newProfileName.trim() ||
+              loadingSections
+            "
+          >
+
+            @if (saving) {
+
+              Guardando...
+
+            } @else {
+
+              Guardar perfil
+
+            }
+
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  }
+
+
+  <!-- ========================================================
+       FORMULARIO DE EDICIÓN
+       ======================================================== -->
+
+  @if (showEditForm && editingProfile) {
+
+    <div class="profiles-card edit-profile-card">
+
+      <div class="create-profile-header">
+
+        <div>
+
+          <h2>
+            Editar perfil
+          </h2>
+
+          <p>
+            Modifica la información y las secciones
+            asignadas al perfil.
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="profile-form">
+
+
+        <!-- ==================================================
+             CÓDIGO
+             ================================================== -->
+
+        <div class="profile-code-info">
+
+          <strong>
+            Código
+          </strong>
+
+          <span>
+            {{ editingProfile.code }}
+          </span>
+
+        </div>
+
+
+        <!-- ==================================================
+             NOMBRE
+             ================================================== -->
+
+        <div class="form-group">
+
+          <label for="edit-profile-name">
+            Nombre del perfil
+          </label>
+
+          <input
+            id="edit-profile-name"
+            type="text"
+            [(ngModel)]="editProfileName"
+            placeholder="Nombre del perfil"
+            maxlength="255"
+            [disabled]="saving"
+          />
+
+        </div>
+
+
+        <!-- ==================================================
+             DESCRIPCIÓN
+             ================================================== -->
+
+        <div class="form-group">
+
+          <label for="edit-profile-description">
+            Descripción
+          </label>
+
+          <textarea
+            id="edit-profile-description"
+            [(ngModel)]="editProfileDescription"
+            placeholder="Descripción del perfil."
+            maxlength="1000"
+            rows="4"
+            [disabled]="saving"
+          ></textarea>
+
+        </div>
+
+
+        <!-- ==================================================
+             SECCIONES
+             ================================================== -->
+
+        <div class="form-group">
+
+          <div class="form-section-header">
+
+            <div>
+
+              <label>
+                Secciones permitidas
+              </label>
+
+              <p>
+                Selecciona las secciones que podrá utilizar
+                este perfil.
+              </p>
+
+            </div>
+
+
+            <span class="selected-count">
+
+              {{ editSelectedSectionIds.length }}
+              seleccionadas
+
+            </span>
+
+          </div>
+
+
+          @if (loadingSections) {
+
+            <div class="profiles-state">
+
+              Cargando secciones...
+
+            </div>
+
+          }
+
+
+          @if (!loadingSections) {
+
+            @if (sections.length > 0) {
+
+              <div class="sections-list">
+
+                @for (
+                  section of sections;
+                  track section.id
+                ) {
+
+                  <label
+                    class="section-option"
+                    [class.selected]="
+                      isEditSectionSelected(section.id)
+                    "
+                  >
+
+                    <input
+                      type="checkbox"
+                      [checked]="
+                        isEditSectionSelected(section.id)
+                      "
+                      (change)="
+                        toggleEditSection(section.id)
+                      "
+                      [disabled]="saving"
+                    />
+
+
+                    <div class="section-option-content">
+
+                      <strong>
+                        {{ section.name }}
+                      </strong>
+
+                      <span>
+                        {{ section.code }}
+                      </span>
+
+                      @if (section.description) {
+
+                        <small>
+                          {{ section.description }}
+                        </small>
+
+                      }
+
+                      <small>
+                        Ruta: {{ section.route }}
+                      </small>
+
+                    </div>
+
+                  </label>
+
+                }
+
+              </div>
+
+            }
+
+
+            @if (sections.length === 0) {
+
+              <div class="profiles-state">
+
+                <h3>
+                  No hay secciones disponibles
+                </h3>
+
+                <p>
+                  No existen secciones configuradas
+                  en Laravel.
+                </p>
+
+              </div>
+
+            }
+
+          }
+
+        </div>
+
+
+        <!-- ==================================================
+             ACCIONES DE EDICIÓN
+             ================================================== -->
+
+        <div class="profile-form-actions">
+
+          <button
+            type="button"
+            class="btn btn-secondary"
+            (click)="closeEditForm()"
+            [disabled]="saving"
+          >
+            Cancelar
+          </button>
+
+
+          <button
+            type="button"
+            class="btn btn-primary"
+            (click)="updateProfile()"
+            [disabled]="
+              saving ||
+              !editProfileName.trim() ||
+              loadingSections
+            "
+          >
+
+            @if (saving) {
+
+              Guardando...
+
+            } @else {
+
+              Guardar cambios
+
+            }
+
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  }
+
+
+  <!-- ========================================================
+       TABLA
+       ======================================================== -->
+
+  <div class="profiles-card">
+
+
+    @if (loading) {
+
+      <div class="profiles-state">
+
+        Cargando perfiles...
+
+      </div>
+
+    }
+
+
+    @if (!loading) {
+
+      @if (profiles.length > 0) {
+
+        <div class="table-wrapper">
+
+          <table>
+
+            <thead>
+
+              <tr>
+
+                <th>
+                  Código
+                </th>
+
+                <th>
+                  Nombre
+                </th>
+
+                <th>
+                  Descripción
+                </th>
+
+                <th>
+                  Secciones
+                </th>
+
+                <th>
+                  Fecha de creación
+                </th>
+
+                <th>
+                  Acciones
+                </th>
+
+              </tr>
+
+            </thead>
+
+
+            <tbody>
+
+              @for (
+                profile of profiles;
+                track profile.id
+              ) {
+
+                <tr>
+
+
+                  <td>
+
+                    <strong>
+                      {{ profile.code }}
+                    </strong>
+
+                  </td>
+
+
+                  <td>
+
+                    {{ profile.name }}
+
+                  </td>
+
+
+                  <td>
+
+                    {{ profile.description || 'Sin descripción' }}
+
+                  </td>
+
+
+                  <td>
+
+                    <div class="section-info">
+
+                      <strong>
+                        {{ getSectionCount(profile) }}
+                      </strong>
+
+                      <span>
+                        {{ getSectionNames(profile) }}
+                      </span>
+
+                    </div>
+
+                  </td>
+
+
+                  <td>
+
+                    {{ formatDate(profile.created_at) }}
+
+                  </td>
+
+
+                  <td>
+
+                    <div class="row-actions">
+
+                      <button
+                        type="button"
+                        class="btn btn-view"
+                        (click)="viewProfile(profile)"
+                        [disabled]="deleting"
+                      >
+                        Detalle
+                      </button>
+
+
+                      <button
+                        type="button"
+                        class="btn btn-edit"
+                        (click)="editProfile(profile)"
+                        [disabled]="saving || deleting"
+                      >
+                        Editar
+                      </button>
+
+
+                      <button
+                        type="button"
+                        class="btn btn-delete"
+                        (click)="deleteProfile(profile)"
+                        [disabled]="deleting || saving"
+                      >
+                        @if (deleting) {
+                          Eliminando...
+                        } @else {
+                          Eliminar
+                        }
+                      </button>
+
+                    </div>
+
+                  </td>
+
+                </tr>
+
+              }
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      }
+
+
+      @if (profiles.length === 0) {
+
+        <div class="profiles-state">
+
+          <h2>
+            No hay perfiles para mostrar
+          </h2>
+
+          <p>
+            No existen perfiles de autorización registrados.
+          </p>
+
+        </div>
+
+      }
+
+    }
+
+  </div>
+
+
+  <!-- ========================================================
+       DETALLE DEL PERFIL
+       ======================================================== -->
+
+  @if (showDetail && selectedProfile) {
+
+    <div class="profile-modal-backdrop">
+
+      <div
+        class="profile-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="profile-detail-title"
+      >
+
+
+        <!-- ==================================================
+             ENCABEZADO
+             ================================================== -->
+
+        <div class="profile-modal-header">
+
+          <div>
+
+            <span class="profile-modal-code">
+
+              {{ selectedProfile.code }}
+
+            </span>
+
+            <h2 id="profile-detail-title">
+
+              {{ selectedProfile.name }}
+
+            </h2>
+
+          </div>
+
+
+          <button
+            type="button"
+            class="modal-close"
+            (click)="closeDetail()"
+            aria-label="Cerrar detalle"
+          >
+            ×
+          </button>
+
+        </div>
+
+
+        <!-- ==================================================
+             INFORMACIÓN GENERAL
+             ================================================== -->
+
+        <div class="profile-detail-content">
+
+
+          <div class="detail-item">
+
+            <span class="detail-label">
+              Nombre
+            </span>
+
+            <strong>
+              {{ selectedProfile.name }}
+            </strong>
+
+          </div>
+
+
+          <div class="detail-item">
+
+            <span class="detail-label">
+              Código
+            </span>
+
+            <strong>
+              {{ selectedProfile.code }}
+            </strong>
+
+          </div>
+
+
+          <div class="detail-item detail-item-wide">
+
+            <span class="detail-label">
+              Descripción
+            </span>
+
+            <p>
+              {{
+                selectedProfile.description ||
+                'Sin descripción'
+              }}
+            </p>
+
+          </div>
+
+
+          <div class="detail-item">
+
+            <span class="detail-label">
+              Fecha de creación
+            </span>
+
+            <strong>
+              {{ formatDate(selectedProfile.created_at) }}
+            </strong>
+
+          </div>
+
+
+          <div class="detail-item">
+
+            <span class="detail-label">
+              Última actualización
+            </span>
+
+            <strong>
+              {{ formatDate(selectedProfile.updated_at) }}
+            </strong>
+
+          </div>
+
+
+          <!-- ================================================
+               SECCIONES
+               ================================================ -->
+
+          <div class="detail-item detail-item-wide">
+
+            <span class="detail-label">
+              Secciones permitidas
+            </span>
+
+
+            @if (
+              selectedProfile.sections &&
+              selectedProfile.sections.length > 0
+            ) {
+
+              <div class="detail-sections">
+
+                @for (
+                  section of selectedProfile.sections;
+                  track section.id
+                ) {
+
+                  <div class="detail-section">
+
+                    <strong>
+                      {{ section.name }}
+                    </strong>
+
+                    <span>
+                      {{ section.code }}
+                    </span>
+
+                    @if (section.description) {
+
+                      <small>
+                        {{ section.description }}
+                      </small>
+
+                    }
+
+                    <small>
+                      Ruta: {{ section.route }}
+                    </small>
+
+                  </div>
+
+                }
+
+              </div>
+
+            } @else {
+
+              <p>
+                Sin secciones asignadas.
+              </p>
+
+            }
+
+          </div>
+
+        </div>
+
+
+        <!-- ==================================================
+             PIE DEL MODAL
+             ================================================== -->
+
+        <div class="profile-modal-footer">
+
+          <button
+            type="button"
+            class="btn btn-secondary"
+            (click)="closeDetail()"
+          >
+            Cerrar
+          </button>
+
+
+          <button
+            type="button"
+            class="btn btn-edit"
+            (click)="editProfile(selectedProfile)"
+          >
+            Editar perfil
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  }
+
+</section>

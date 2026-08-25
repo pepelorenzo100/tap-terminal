@@ -1,16 +1,52 @@
+<!--
+|--------------------------------------------------------------------------
+| TAP TERMINAL - USERS COMPONENT
+|--------------------------------------------------------------------------
+|
+| Archivo:
+|     frontend/src/app/pages/users/users.component.html
+|
+| Responsabilidad:
+|     Interfaz de administración de usuarios.
+|
+| Funcionalidades:
+|     - Listar usuarios.
+|     - Crear usuarios.
+|     - Editar usuarios.
+|     - Eliminar usuarios.
+|     - Consultar detalle.
+|     - Mostrar fotografía de perfil.
+|     - Exportar Excel.
+|     - Exportar PDF.
+
+|--------------------------------------------------------------------------
+-->
+
 <main class="users-container">
+
+
+  <!-- =========================================================
+       ENCABEZADO
+       ========================================================= -->
 
   <header class="users-header">
 
     <div>
-      <h1>Usuarios</h1>
+
+      <h1>
+        Usuarios
+      </h1>
 
       <p>
         Administración de usuarios del sistema TAP Terminal.
       </p>
+
     </div>
 
+
     <div class="header-actions">
+
+      <!-- NUEVO USUARIO -->
 
       <button
         type="button"
@@ -20,6 +56,9 @@
         Nuevo usuario
       </button>
 
+
+      <!-- EXPORTAR EXCEL -->
+
       <button
         type="button"
         class="btn-excel"
@@ -27,6 +66,9 @@
       >
         Exportar Excel
       </button>
+
+
+      <!-- EXPORTAR PDF -->
 
       <button
         type="button"
@@ -36,18 +78,15 @@
         Exportar PDF
       </button>
 
-      <button
-        type="button"
-        class="btn-logout"
-        (click)="logout()"
-      >
-        Cerrar sesión
-      </button>
-
     </div>
 
   </header>
 
+
+
+  <!-- =========================================================
+       MENSAJES DEL SISTEMA
+       ========================================================= -->
 
   <div
     *ngIf="message"
@@ -62,6 +101,7 @@
       {{ message }}
     </span>
 
+
     <button
       type="button"
       class="message-close"
@@ -74,9 +114,10 @@
   </div>
 
 
-  <!-- =======================================================
-       FORMULARIO
-       ======================================================= -->
+
+  <!-- =========================================================
+       FORMULARIO DE USUARIO
+       ========================================================= -->
 
   <section
     *ngIf="showForm"
@@ -84,16 +125,20 @@
   >
 
     <h2>
+
       {{
         editingUserId === null
           ? 'Nuevo usuario'
           : 'Editar usuario'
       }}
+
     </h2>
+
 
     <p>
       Registra o actualiza la información del usuario.
     </p>
+
 
 
     <form
@@ -102,11 +147,17 @@
       novalidate
     >
 
+
+      <!-- =====================================================
+           NOMBRE
+           ===================================================== -->
+
       <div class="form-group">
 
         <label for="user-name">
           Nombre
         </label>
+
 
         <input
           id="user-name"
@@ -120,6 +171,7 @@
           #name="ngModel"
         />
 
+
         <small
           class="field-error"
           *ngIf="name.invalid && name.touched"
@@ -130,11 +182,17 @@
       </div>
 
 
+
+      <!-- =====================================================
+           CORREO
+           ===================================================== -->
+
       <div class="form-group">
 
         <label for="user-email">
           Usuario / correo electrónico
         </label>
+
 
         <input
           id="user-email"
@@ -148,6 +206,7 @@
           #email="ngModel"
         />
 
+
         <small
           class="field-error"
           *ngIf="email.invalid && email.touched"
@@ -158,11 +217,17 @@
       </div>
 
 
+
+      <!-- =====================================================
+           TELÉFONO
+           ===================================================== -->
+
       <div class="form-group">
 
         <label for="user-phone">
           Número de teléfono
         </label>
+
 
         <input
           id="user-phone"
@@ -173,18 +238,26 @@
           autocomplete="tel"
         />
 
+
         <small class="field-help">
-          Incluye el código de país. Ejemplo: +523141234567
+          Incluye el código de país.
+          Ejemplo: +523141234567
         </small>
 
       </div>
 
+
+
+      <!-- =====================================================
+           CONTRASEÑA
+           ===================================================== -->
 
       <div class="form-group">
 
         <label for="user-password">
           Contraseña
         </label>
+
 
         <input
           id="user-password"
@@ -198,6 +271,9 @@
           #password="ngModel"
         />
 
+
+        <!-- ERROR: CONTRASEÑA OBLIGATORIA -->
+
         <small
           class="field-error"
           *ngIf="
@@ -208,6 +284,9 @@
         >
           La contraseña es obligatoria.
         </small>
+
+
+        <!-- ERROR: CONTRASEÑA CORTA -->
 
         <small
           class="field-error"
@@ -220,6 +299,9 @@
           La contraseña debe tener al menos 8 caracteres.
         </small>
 
+
+        <!-- AYUDA AL EDITAR -->
+
         <small
           class="field-help"
           *ngIf="editingUserId !== null"
@@ -230,18 +312,35 @@
       </div>
 
 
+
+      <!-- =====================================================
+           FOTO DE PERFIL
+           ===================================================== -->
+
       <div class="form-group">
 
         <label for="user-photo">
           Foto de perfil
         </label>
 
+
         <input
           id="user-photo"
           type="file"
-          accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+          accept="
+            .jpg,
+            .jpeg,
+            .png,
+            .webp,
+            image/jpeg,
+            image/png,
+            image/webp
+          "
           (change)="onFileSelected($event)"
         />
+
+
+        <!-- ARCHIVO SELECCIONADO -->
 
         <small
           class="field-help"
@@ -251,9 +350,17 @@
           {{ selectedFileName }}
         </small>
 
+
+        <!-- INFORMACIÓN -->
+
         <small class="field-help">
-          Formatos permitidos: JPG, PNG o WEBP. Máximo 2 MB.
+          Formatos permitidos:
+          JPG, PNG o WEBP.
+          Máximo 2 MB.
         </small>
+
+
+        <!-- FOTO OBLIGATORIA AL CREAR -->
 
         <small
           class="field-error"
@@ -268,6 +375,11 @@
       </div>
 
 
+
+      <!-- =====================================================
+           ACCIONES DEL FORMULARIO
+           ===================================================== -->
+
       <div class="actions">
 
         <button
@@ -275,6 +387,7 @@
           class="btn-primary"
           [disabled]="userForm.invalid || saving"
         >
+
           {{
             saving
               ? 'Guardando...'
@@ -284,7 +397,9 @@
                     : 'Guardar cambios'
                 )
           }}
+
         </button>
+
 
         <button
           type="button"
@@ -302,11 +417,15 @@
   </section>
 
 
-  <!-- =======================================================
-       LISTADO
-       ======================================================= -->
+
+  <!-- =========================================================
+       LISTADO DE USUARIOS
+       ========================================================= -->
 
   <section class="users-card">
+
+
+    <!-- ENCABEZADO -->
 
     <div class="list-header">
 
@@ -315,6 +434,7 @@
         <h2>
           Lista de usuarios
         </h2>
+
 
         <p>
           Usuarios registrados actualmente en el sistema.
@@ -325,45 +445,92 @@
     </div>
 
 
+
+    <!-- =======================================================
+         TABLA
+         ======================================================= -->
+
     <div class="table-responsive">
 
       <table>
+
+
+        <!-- ===================================================
+             ENCABEZADO DE TABLA
+             =================================================== -->
 
         <thead>
 
           <tr>
 
-            <th>Código</th>
+            <th>
+              Código
+            </th>
 
-            <th>Usuario</th>
+            <th>
+              Usuario
+            </th>
 
-            <th>Nombre</th>
+            <th>
+              Nombre
+            </th>
 
-            <th>Fecha de creación</th>
+            <th>
+              Fecha de creación
+            </th>
 
-            <th>Acciones</th>
+            <th>
+              Acciones
+            </th>
 
           </tr>
 
         </thead>
 
+
+
+        <!-- ===================================================
+             CUERPO DE TABLA
+             =================================================== -->
+
         <tbody>
+
+
+          <!-- USUARIOS -->
 
           <tr
             *ngFor="let user of users"
           >
 
+
+            <!-- CÓDIGO -->
+
             <td data-label="Código">
+
               {{ user.code }}
+
             </td>
+
+
+            <!-- CORREO -->
 
             <td data-label="Usuario">
+
               {{ user.email }}
+
             </td>
 
+
+            <!-- NOMBRE -->
+
             <td data-label="Nombre">
+
               {{ user.name }}
+
             </td>
+
+
+            <!-- FECHA -->
 
             <td data-label="Fecha de creación">
 
@@ -378,9 +545,15 @@
 
             </td>
 
+
+            <!-- ACCIONES -->
+
             <td data-label="Acciones">
 
               <div class="actions">
+
+
+                <!-- DETALLE -->
 
                 <button
                   type="button"
@@ -390,6 +563,9 @@
                   Detalle
                 </button>
 
+
+                <!-- EDITAR -->
+
                 <button
                   type="button"
                   class="btn-edit"
@@ -397,6 +573,9 @@
                 >
                   Editar
                 </button>
+
+
+                <!-- ELIMINAR -->
 
                 <button
                   type="button"
@@ -413,7 +592,14 @@
           </tr>
 
 
-          <tr *ngIf="users.length === 0">
+
+          <!-- =================================================
+               LISTA VACÍA
+               ================================================= -->
+
+          <tr
+            *ngIf="users.length === 0"
+          >
 
             <td
               colspan="5"
@@ -435,8 +621,9 @@
 </main>
 
 
+
 <!-- =========================================================
-     MODAL DE DETALLE
+     MODAL DE DETALLE DEL USUARIO
      ========================================================= -->
 
 <div
@@ -447,13 +634,20 @@
   aria-labelledby="user-detail-title"
 >
 
+
   <section class="detail-modal">
+
+
+    <!-- =====================================================
+         ENCABEZADO DEL MODAL
+         ===================================================== -->
 
     <header class="detail-modal-header">
 
       <h2 id="user-detail-title">
         Detalle del usuario
       </h2>
+
 
       <button
         type="button"
@@ -467,7 +661,15 @@
     </header>
 
 
+
+    <!-- =====================================================
+         CUERPO DEL MODAL
+         ===================================================== -->
+
     <div class="detail-modal-body">
+
+
+      <!-- CÓDIGO -->
 
       <p>
 
@@ -482,6 +684,9 @@
       </p>
 
 
+
+      <!-- USUARIO -->
+
       <p>
 
         <strong>
@@ -494,6 +699,9 @@
 
       </p>
 
+
+
+      <!-- NOMBRE -->
 
       <p>
 
@@ -508,6 +716,9 @@
       </p>
 
 
+
+      <!-- TELÉFONO -->
+
       <p>
 
         <strong>
@@ -520,6 +731,9 @@
 
       </p>
 
+
+
+      <!-- FECHA -->
 
       <p>
 
@@ -543,11 +757,21 @@
       </p>
 
 
+
+      <!-- ===================================================
+           FOTO DE PERFIL
+           =================================================== -->
+
       <div class="profile-photo-section">
 
         <strong>
           Foto de perfil
         </strong>
+
+
+        <!-- =================================================
+             USUARIO CON FOTO
+             ================================================= -->
 
         <div
           *ngIf="selectedUser.profile_photo"
@@ -556,14 +780,20 @@
 
           <img
             [src]="
-              'http://127.0.0.1:8000/storage/' +
-              selectedUser.profile_photo
+              getProfilePhotoUrl(
+                selectedUser.profile_photo
+              )
             "
             alt="Foto de perfil del usuario"
             class="profile-photo"
           />
 
         </div>
+
+
+        <!-- =================================================
+             USUARIO SIN FOTO
+             ================================================= -->
 
         <span
           *ngIf="!selectedUser.profile_photo"
@@ -577,7 +807,15 @@
     </div>
 
 
+
+    <!-- =====================================================
+         PIE DEL MODAL
+         ===================================================== -->
+
     <footer class="detail-modal-footer">
+
+
+      <!-- EDITAR -->
 
       <button
         type="button"
@@ -586,6 +824,9 @@
       >
         Editar
       </button>
+
+
+      <!-- CERRAR -->
 
       <button
         type="button"

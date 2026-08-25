@@ -2,26 +2,31 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
+use MongoDB\Laravel\Auth\User as Authenticatable;
+
 /*
 |--------------------------------------------------------------------------
 | TAP TERMINAL
 | USER MODEL
 |--------------------------------------------------------------------------
 |
-| Modelo de usuarios de TAP Terminal.
+| Modelo principal de usuarios de TAP Terminal.
 |
-| Los usuarios se almacenan en MongoDB.
+| Responsabilidades:
 |
-| Este modelo también será utilizado por Laravel
-| para realizar la autenticación.
+| - Representar usuarios almacenados en MongoDB.
+| - Participar en la autenticación mediante Laravel Sanctum.
+| - Generar tokens de autenticación.
+| - Mantener el perfil personal del usuario.
+| - Mantener las relaciones con perfiles de autorización.
 |
 |--------------------------------------------------------------------------
 */
-
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens;
-use MongoDB\Laravel\Auth\User as Authenticatable;
 
 class User extends Authenticatable
 {
@@ -29,40 +34,26 @@ class User extends Authenticatable
     |--------------------------------------------------------------------------
     | TRAITS
     |--------------------------------------------------------------------------
-    |
-    | HasApiTokens
-    | Permite generar tokens mediante Laravel Sanctum.
-    |
-    | HasFactory
-    | Permite utilizar factories para pruebas.
-    |
-    | Notifiable
-    | Permite utilizar las notificaciones de Laravel.
-    |
     */
 
     use HasApiTokens, HasFactory, Notifiable;
+
 
     /*
     |--------------------------------------------------------------------------
     | MONGODB
     |--------------------------------------------------------------------------
-    |
-    | Colección donde se almacenarán los usuarios.
-    |
     */
 
     protected $connection = 'mongodb';
 
     protected $table = 'users';
 
+
     /*
     |--------------------------------------------------------------------------
     | MASS ASSIGNMENT
     |--------------------------------------------------------------------------
-    |
-    | Campos permitidos al crear o actualizar usuarios.
-    |
     */
 
     protected $fillable = [
@@ -74,13 +65,11 @@ class User extends Authenticatable
         'password',
     ];
 
+
     /*
     |--------------------------------------------------------------------------
     | HIDDEN
     |--------------------------------------------------------------------------
-    |
-    | Nunca debemos devolver la contraseña mediante la API.
-    |
     */
 
     protected $hidden = [
@@ -88,14 +77,11 @@ class User extends Authenticatable
         'remember_token',
     ];
 
+
     /*
     |--------------------------------------------------------------------------
     | CASTS
     |--------------------------------------------------------------------------
-    |
-    | Laravel almacenará y devolverá estas propiedades
-    | con el tipo correspondiente.
-    |
     */
 
     protected function casts(): array
@@ -104,5 +90,43 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | PERFIL PERSONAL
+    |--------------------------------------------------------------------------
+    |
+    | Relación uno a uno con Profile.php.
+    |
+    */
+
+    public function profile(): HasOne
+    {
+        return $this->hasOne(
+            Profile::class,
+            'user_id',
+            '_id'
+        );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | PERFILES DE AUTORIZACIÓN
+    |--------------------------------------------------------------------------
+    |
+    | Relación uno a muchos con UserProfile.php.
+    |
+    */
+
+    public function userProfiles(): HasMany
+    {
+        return $this->hasMany(
+            UserProfile::class,
+            'user_id',
+            '_id'
+        );
     }
 }

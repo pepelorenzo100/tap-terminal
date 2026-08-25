@@ -1,48 +1,67 @@
 /**
  * ============================================================
  * TAP TERMINAL
- * GUARD DE AUTENTICACIÓN
+ * AUTH GUARD
  * ============================================================
  *
  * Archivo:
- * auth.guard.ts
+ *
+ *     frontend/src/app/guards/auth.guard.ts
  *
  * Responsabilidad:
  *
- * Controlar el acceso a las rutas que requieren
- * autenticación.
+ *     Proteger las rutas privadas de Angular.
  *
  * Flujo:
  *
- * Usuario
- *    ↓
- * Angular Router
- *    ↓
- * AuthGuard
- *    ↓
- * AuthService
- *    ↓
- * ¿Existe token?
+ *     Usuario
+ *         ↓
+ *     Intento de navegación
+ *         ↓
+ *     AuthGuard
+ *         ↓
+ *     AuthService.getToken()
+ *         ↓
+ *     ¿Existe token?
+ *        /       \
+ *      NO         SÍ
+ *      ↓          ↓
+ *   /login    Permitir ruta
  *
- *       Sí
- *       ↓
- *   Permitir acceso
+ * IMPORTANTE:
  *
- *       No
- *       ↓
- *    /login
+ * Este guard controla únicamente la navegación del frontend.
+ *
+ * La seguridad real de los endpoints continúa estando
+ * en Laravel mediante:
+ *
+ *     auth:sanctum
+ *
+ * y los mecanismos de autorización del backend.
+ *
+ * Por lo tanto:
+ *
+ *     Angular
+ *         → controla navegación y experiencia de usuario.
+ *
+ *     Laravel
+ *         → controla la seguridad real de la API.
  *
  * ============================================================
  */
 
-import { inject } from '@angular/core';
+import {
+  inject
+} from '@angular/core';
 
 import {
   CanActivateFn,
   Router
 } from '@angular/router';
 
-import { AuthService } from '../services/auth.service';
+import {
+  AuthService
+} from '../services/auth.service';
 
 
 /**
@@ -50,45 +69,88 @@ import { AuthService } from '../services/auth.service';
  * AUTH GUARD
  * ============================================================
  *
- * CanActivateFn es la implementación funcional de un guard
- * en Angular moderno.
+ * Guard funcional de Angular.
  *
- * Se ejecuta antes de permitir el acceso a una ruta.
+ * Comprueba si existe un token de autenticación almacenado
+ * mediante AuthService.
+ *
+ * Comportamiento:
+ *
+ *     Token existente
+ *         ↓
+ *     Permite navegación.
+ *
+ *     Sin token
+ *         ↓
+ *     Redirige a /login.
+ *
+ * Además, conserva la URL solicitada mediante:
+ *
+ *     returnUrl
+ *
+ * Esto permite que el flujo de autenticación pueda conocer
+ * posteriormente qué ruta intentaba abrir el usuario.
+ *
+ * ============================================================
  */
-export const authGuard: CanActivateFn = () => {
+
+export const authGuard: CanActivateFn = (
+  _route,
+  state
+) => {
 
   /**
    * ==========================================================
-   * OBTENER SERVICIOS
+   * INYECTAR SERVICIOS
    * ==========================================================
    *
-   * inject() permite obtener servicios desde el sistema
-   * de Dependency Injection de Angular.
+   * Los guards funcionales utilizan inject() para obtener
+   * las dependencias necesarias.
    */
 
-  const authService = inject(AuthService);
+  const authService =
+    inject(AuthService);
 
-  const router = inject(Router);
+  const router =
+    inject(Router);
 
 
   /**
    * ==========================================================
-   * COMPROBAR AUTENTICACIÓN
+   * OBTENER TOKEN
    * ==========================================================
    *
-   * AuthService.isAuthenticated() comprueba si existe
-   * un token almacenado en localStorage.
+   * AuthService centraliza el acceso al token.
+   *
+   * No duplicamos aquí la lógica de localStorage.
    */
 
-  if (authService.isAuthenticated()) {
+  const token =
+    authService.getToken();
 
-    /**
-     * Existe token.
-     *
-     * Permitimos continuar hacia la ruta solicitada.
-     */
+
+  /**
+   * ==========================================================
+   * USUARIO AUTENTICADO
+   * ==========================================================
+   *
+   * Si existe un token, permitimos continuar.
+   *
+   * IMPORTANTE:
+   *
+   * La existencia del token no garantiza por sí sola que
+   * la sesión siga siendo válida.
+   *
+   * Laravel realizará la validación definitiva cuando
+   * se consulte un endpoint protegido.
+   */
+
+  if (
+    token
+  ) {
 
     return true;
+
   }
 
 
@@ -97,12 +159,30 @@ export const authGuard: CanActivateFn = () => {
    * USUARIO NO AUTENTICADO
    * ==========================================================
    *
-   * No existe token.
+   * Si no existe token:
    *
-   * Por seguridad no permitimos acceder a la ruta protegida.
+   *     1. Bloqueamos la navegación.
+   *     2. Redirigimos al login.
+   *     3. Conservamos la URL solicitada.
    *
-   * Redirigimos al login.
+   * Ejemplo:
+   *
+   *     /profiles
+   *
+   * se convierte en:
+   *
+   *     /login?returnUrl=%2Fprofiles
+   *
    */
 
-  return router.createUrlTree(['/login']);
+  return router.createUrlTree(
+    ['/login'],
+    {
+      queryParams: {
+        returnUrl:
+          state.url
+      }
+    }
+  );
+
 };
