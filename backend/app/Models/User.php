@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use MongoDB\Laravel\Auth\User as Authenticatable;
+use App\Traits\Auditable;
 
 /*
 |--------------------------------------------------------------------------
@@ -36,7 +37,7 @@ class User extends Authenticatable
     |--------------------------------------------------------------------------
     */
 
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, Auditable;
 
 
     /*

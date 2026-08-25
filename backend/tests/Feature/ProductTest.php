@@ -190,6 +190,42 @@ class ProductTest extends TestCase
 
         /*
         |--------------------------------------------------------------------------
+        | OTORGAR PERMISOS DE SECCIÓN (SEC-PRODUCTS)
+        |--------------------------------------------------------------------------
+        |
+        | El middleware CheckSectionPermission exige que el usuario
+        | autenticado tenga un AccessProfile cuyo section_ids incluya
+        | la sección solicitada. Aquí creamos (o reutilizamos) esa
+        | sección y ese perfil, y se lo asignamos al usuario de prueba,
+        | para que las pruebas reflejen el sistema real de permisos.
+        |
+        */
+
+        $section = \App\Models\Section::firstOrCreate(
+            ['code' => 'SEC-PRODUCTS'],
+            [
+                'name' => 'Productos',
+                'description' => 'Acceso al módulo de productos',
+                'route' => '/products',
+            ]
+        );
+
+        $accessProfile = \App\Models\AccessProfile::firstOrCreate(
+            ['code' => 'PRF-TEST-PRODUCTS'],
+            [
+                'name' => 'Perfil de prueba - Productos',
+                'description' => 'Perfil generado automáticamente para pruebas automatizadas',
+                'section_ids' => [(string) $section->getKey()],
+            ]
+        );
+
+        \App\Models\UserProfile::create([
+            'user_id' => $user->getKey(),
+            'profile_id' => (string) $accessProfile->getKey(),
+        ]);
+
+        /*
+        |--------------------------------------------------------------------------
         | REALIZAR LOGIN
         |--------------------------------------------------------------------------
         |
@@ -226,7 +262,6 @@ class ProductTest extends TestCase
             'data.token'
         );
     }
-
 
     /**
      * ========================================================

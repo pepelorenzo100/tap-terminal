@@ -173,7 +173,7 @@ class UserTest extends TestCase
      * @return string Token de autenticación.
      * ========================================================
      */
-    private function authenticate(): string
+private function authenticate(): string
     {
         /*
         |--------------------------------------------------------------------------
@@ -195,6 +195,38 @@ class UserTest extends TestCase
             ),
         ]);
 
+        /*
+        |--------------------------------------------------------------------------
+        | OTORGAR PERMISOS DE SECCIÓN (SEC-USERS)
+        |--------------------------------------------------------------------------
+        |
+        | Igual que en ProductTest: el middleware CheckSectionPermission
+        | exige un AccessProfile con la sección correspondiente.
+        |
+        */
+
+        $section = \App\Models\Section::firstOrCreate(
+            ['code' => 'SEC-USERS'],
+            [
+                'name' => 'Usuarios',
+                'description' => 'Acceso al módulo de usuarios',
+                'route' => '/users',
+            ]
+        );
+
+        $accessProfile = \App\Models\AccessProfile::firstOrCreate(
+            ['code' => 'PRF-TEST-USERS'],
+            [
+                'name' => 'Perfil de prueba - Usuarios',
+                'description' => 'Perfil generado automáticamente para pruebas automatizadas',
+                'section_ids' => [(string) $section->getKey()],
+            ]
+        );
+
+        \App\Models\UserProfile::create([
+            'user_id' => $user->getKey(),
+            'profile_id' => (string) $accessProfile->getKey(),
+        ]);
 
         /*
         |--------------------------------------------------------------------------
@@ -219,7 +251,6 @@ class UserTest extends TestCase
             ]
         );
 
-
         /*
         |--------------------------------------------------------------------------
         | VERIFICAR LOGIN
@@ -227,7 +258,6 @@ class UserTest extends TestCase
         */
 
         $response->assertOk();
-
 
         /*
         |--------------------------------------------------------------------------
@@ -239,7 +269,6 @@ class UserTest extends TestCase
             'data.token'
         );
 
-
         /*
         |--------------------------------------------------------------------------
         | VERIFICAR QUE EXISTE TOKEN
@@ -247,7 +276,6 @@ class UserTest extends TestCase
         */
 
         $this->assertNotEmpty($token);
-
 
         /*
         |--------------------------------------------------------------------------
@@ -257,7 +285,6 @@ class UserTest extends TestCase
 
         return $token;
     }
-
 
     /**
      * ========================================================
@@ -323,24 +350,27 @@ class UserTest extends TestCase
         |
         */
 
+ $accessProfile = \App\Models\AccessProfile::where(
+            'code',
+            'PRF-TEST-USERS'
+        )->firstOrFail();
+
         $response = $this->withToken($token)
             ->postJson(
                 '/api/users',
                 [
                     'name' => 'Usuario Test',
-
                     'email' => 'test@example.com',
-
                     'phone' => '+523141234567',
-
                     'password' => 'Password123!',
-
                     'profile_photo' => UploadedFile::fake()->image(
                         'profile.jpg'
                     ),
+                    'profile_ids' => [
+                        (string) $accessProfile->getKey(),
+                    ],
                 ]
             );
-
 
         /*
         |--------------------------------------------------------------------------
@@ -624,18 +654,28 @@ class UserTest extends TestCase
         |--------------------------------------------------------------------------
         */
 
+        $accessProfile = \App\Models\AccessProfile::where(
+            'code',
+            'PRF-TEST-USERS'
+        )->firstOrFail();
+
+        $accessProfile = \App\Models\AccessProfile::where(
+            'code',
+            'PRF-TEST-USERS'
+        )->firstOrFail();
+
         $response = $this->withToken($token)
             ->putJson(
                 '/api/users/'.$user->getKey(),
                 [
                     'name' => 'Usuario Actualizado',
-
                     'email' => 'update@example.com',
-
                     'phone' => '+523141234567',
+                    'profile_ids' => [
+                        (string) $accessProfile->getKey(),
+                    ],
                 ]
             );
-
 
         /*
         |--------------------------------------------------------------------------
@@ -821,19 +861,24 @@ class UserTest extends TestCase
         |--------------------------------------------------------------------------
         */
 
+        $accessProfile = \App\Models\AccessProfile::where(
+            'code',
+            'PRF-TEST-USERS'
+        )->firstOrFail();
+
         $response = $this->withToken($token)
             ->postJson(
                 '/api/users',
                 [
                     'name' => 'Usuario Duplicado',
-
                     'email' => 'duplicate@example.com',
-
                     'password' => 'Password123!',
-
                     'profile_photo' => UploadedFile::fake()->image(
                         'profile.jpg'
                     ),
+                    'profile_ids' => [
+                        (string) $accessProfile->getKey(),
+                    ],
                 ]
             );
 

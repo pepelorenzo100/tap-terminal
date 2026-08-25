@@ -114,6 +114,7 @@
 */
 
 use App\Http\Controllers\Api\AccessProfileController;
+use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProfileController;
@@ -490,5 +491,39 @@ Route::middleware('auth:sanctum')->group(function () {
         'profile',
         [ProfileController::class, 'destroy']
     );
+
+  /*
+    |--------------------------------------------------------------------------
+    | BITÁCORA (AUDIT LOG)
+    |--------------------------------------------------------------------------
+    |
+    | GET /api/audit-logs
+    |
+    | Devuelve el historial de cambios (crear, editar, eliminar)
+    | realizados sobre productos, usuarios y perfiles de autorización.
+    |
+    | Es de solo lectura: no existen endpoints POST/PUT/DELETE porque
+    | los registros se generan automáticamente mediante el trait
+    | App\Traits\Auditable, nunca de forma manual.
+    |
+    | Filtros opcionales vía query string:
+    |
+    |     entity      products | users | access_profiles
+    |     entity_id
+    |     from        YYYY-MM-DD
+    |     to          YYYY-MM-DD
+    |
+    | Solamente necesita autenticación (no una sección específica),
+    | igual que /api/profile.
+    |
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get(
+        'audit-logs',
+        [AuditLogController::class, 'index']
+    );
+
+
 
 });

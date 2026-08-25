@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use MongoDB\Laravel\Eloquent\Model;
+use App\Traits\Auditable;
 
 /*
 |--------------------------------------------------------------------------
@@ -26,6 +27,20 @@ use MongoDB\Laravel\Eloquent\Model;
 
 class UserProfile extends Model
 {
+
+/*
+    |--------------------------------------------------------------------------
+    | AUDITORÍA
+    |--------------------------------------------------------------------------
+    |
+    | Registra en bitácora cada vez que se asigna, cambia o quita un
+    | perfil de autorización a un usuario. Esto es clave para
+    | seguridad: permite rastrear cambios de permisos.
+    |
+    */
+
+    use Auditable;
+
     /*
     |--------------------------------------------------------------------------
     | CONEXIÓN MONGODB

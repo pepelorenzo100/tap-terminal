@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use MongoDB\Laravel\Eloquent\Model;
+use App\Traits\Auditable;
 
 /*
 |--------------------------------------------------------------------------
@@ -25,6 +26,20 @@ use MongoDB\Laravel\Eloquent\Model;
 
 class AccessProfile extends Model
 {
+
+/*
+    |--------------------------------------------------------------------------
+    | AUDITORÍA
+    |--------------------------------------------------------------------------
+    |
+    | Registra automáticamente en bitácora cada creación, edición o
+    | eliminación de un perfil de autorización.
+    |
+    */
+
+    use Auditable;        
+
+
     /*
     |--------------------------------------------------------------------------
     | CONEXIÓN MONGODB

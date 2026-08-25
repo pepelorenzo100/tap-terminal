@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Support\Str;
 use MongoDB\Laravel\Eloquent\Model;
+use App\Traits\Auditable;
 
 /**
  * ============================================================
@@ -75,6 +76,19 @@ use MongoDB\Laravel\Eloquent\Model;
  */
 class Product extends Model
 {
+
+/*
+    |--------------------------------------------------------------------------
+    | AUDITORÍA
+    |--------------------------------------------------------------------------
+    |
+    | Registra automáticamente en bitácora cada creación, edición o
+    | eliminación de un producto.
+    |
+    */
+
+    use Auditable; 
+
     /**
      * ========================================================
      * COLECCIÓN DE MONGODB

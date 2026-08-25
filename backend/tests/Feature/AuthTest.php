@@ -186,7 +186,7 @@ class AuthTest extends TestCase
      * USUARIO AUTENTICADO PUEDE CONSULTAR /api/me
      * ============================================================
      */
-    public function test_authenticated_user_can_view_me(): void
+        public function test_authenticated_user_can_view_me(): void
     {
         $user = $this->createUser();
 
@@ -200,6 +200,17 @@ class AuthTest extends TestCase
         $response = $this->withToken($token)
             ->getJson('/api/me');
 
+        /*
+        |--------------------------------------------------------------------------
+        | RUTA REAL DE LA RESPUESTA
+        |--------------------------------------------------------------------------
+        |
+        | AuthController::me() anida los datos del usuario bajo
+        | "data.user" (junto con "data.access_profiles" y
+        | "data.sections"), igual que login() anida bajo "data.user".
+        |
+        */
+
         $response
             ->assertOk()
             ->assertJsonPath(
@@ -207,11 +218,11 @@ class AuthTest extends TestCase
                 'Usuario autenticado correctamente.'
             )
             ->assertJsonPath(
-                'data.email',
+                'data.user.email',
                 $user->email
             )
             ->assertJsonPath(
-                'data.name',
+                'data.user.name',
                 'Usuario Auth Test'
             );
 

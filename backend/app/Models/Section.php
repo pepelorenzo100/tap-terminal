@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use MongoDB\Laravel\Eloquent\Model;
+use App\Traits\Auditable;
 
 /*
 |--------------------------------------------------------------------------
@@ -28,6 +29,19 @@ use MongoDB\Laravel\Eloquent\Model;
 
 class Section extends Model
 {
+
+/*
+    |--------------------------------------------------------------------------
+    | AUDITORÍA
+    |--------------------------------------------------------------------------
+    |
+    | Registra automáticamente en bitácora cada creación, edición o
+    | eliminación de una sección del sistema.
+    |
+    */
+
+    use Auditable;                    
+    
     /*
     |--------------------------------------------------------------------------
     | CONEXIÓN MONGODB
