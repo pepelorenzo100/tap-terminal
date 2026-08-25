@@ -21,3 +21,6 @@ Desktop.ini
 .env
 .env.*
 !.env.example
+productos-tap-terminal.xlsx
+*-tap-terminal.xlsx
+*-tap-terminal.pdf
