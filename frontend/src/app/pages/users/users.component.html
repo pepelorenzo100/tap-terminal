@@ -16,6 +16,7 @@
 |     - Eliminar usuarios.
 |     - Consultar detalle.
 |     - Mostrar fotografía de perfil.
+|     - Asignar perfiles de autorización.
 |     - Exportar Excel.
 |     - Exportar PDF.
 
@@ -370,6 +371,86 @@
           "
         >
           La foto de perfil es obligatoria al crear un usuario.
+        </small>
+
+      </div>
+
+
+
+      <!-- =====================================================
+           PERFILES DE AUTORIZACIÓN
+           ===================================================== -->
+      <!--
+        Laravel exige "profile_ids[]" (al menos uno) al crear o
+        actualizar un usuario. La lista de perfiles disponibles
+        se carga en ngOnInit() mediante AccessProfileService, y
+        la selección se controla con isProfileSelected() /
+        toggleProfile(), ambos ya definidos en el componente.
+      -->
+
+      <div class="form-group">
+
+        <label>
+          Perfiles de autorización
+        </label>
+
+
+        <!-- CARGANDO -->
+
+        <small
+          class="field-help"
+          *ngIf="loadingProfiles"
+        >
+          Cargando perfiles disponibles...
+        </small>
+
+
+        <!-- SIN PERFILES DISPONIBLES -->
+
+        <small
+          class="field-help"
+          *ngIf="!loadingProfiles && accessProfiles.length === 0"
+        >
+          No hay perfiles de autorización registrados.
+          Crea uno primero en la sección "Perfiles".
+        </small>
+
+
+        <!-- LISTA DE PERFILES (CHECKBOXES) -->
+
+        <div
+          class="profiles-checklist"
+          *ngIf="!loadingProfiles && accessProfiles.length > 0"
+        >
+
+          <label
+            class="profile-checkbox-item"
+            *ngFor="let profile of accessProfiles"
+          >
+
+            <input
+              type="checkbox"
+              [checked]="isProfileSelected(profile.id!)"
+              (change)="toggleProfile(profile.id!)"
+            />
+
+            <span>
+              {{ profile.name }}
+              <small>({{ profile.code }})</small>
+            </span>
+
+          </label>
+
+        </div>
+
+
+        <!-- ERROR: NINGÚN PERFIL SELECCIONADO -->
+
+        <small
+          class="field-error"
+          *ngIf="selectedProfileIds.length === 0"
+        >
+          Debes asignar al menos un perfil de autorización.
         </small>
 
       </div>
@@ -752,6 +833,24 @@
               : '—'
           }}
 
+        </span>
+
+      </p>
+
+
+
+      <!-- ===================================================
+           PERFILES DE AUTORIZACIÓN
+           =================================================== -->
+
+      <p>
+
+        <strong>
+          Perfiles de autorización:
+        </strong>
+
+        <span>
+          {{ getUserProfileNames(selectedUser) }}
         </span>
 
       </p>
